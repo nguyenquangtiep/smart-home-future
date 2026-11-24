@@ -3,7 +3,7 @@
 > **Tóm tắt.** Hiện có Dockerfile (non-root, 1 worker, healthcheck) và `docker-compose.yml` **chỉ có app**: chạy bằng
 > Compose thì lệnh và audit nằm trong bộ nhớ. Thiết kế mục tiêu ([ADR 0008](adr/0008-local-deployment-topology.md),
 > Proposed): một máy trong LAN, Compose gồm proxy TLS + app + Postgres + bước migrate, truy cập từ xa qua VPN, NTP bật.
-> Image đặt `SMARTHOME_ENVIRONMENT=production` nên **không chạy được nếu thiếu Postgres và `SMARTHOME_ALLOWED_ORIGINS`** (fail-closed); Compose dev đặt `local` và chỉ bind `127.0.0.1`. **Chưa có môi trường triển khai nào; build Docker chưa kiểm** (daemon không chạy lúc triển khai Sprint 1; `docker compose config` hợp lệ).
+> Image đặt `SMARTHOME_ENVIRONMENT=production` nên **không chạy được nếu thiếu Postgres và `SMARTHOME_ALLOWED_ORIGINS`** (fail-closed); Compose dev đặt `local` và chỉ bind `127.0.0.1`. Build image và chạy với PostgreSQL 16 được kiểm trong CI bằng `scripts/docker_smoke.sh` ([CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175)). **Chưa có môi trường triển khai nào.**
 
 ## 1. Hiện trạng đã xác minh
 
@@ -14,7 +14,7 @@
 | Compose | Chỉ service `api`, `SMARTHOME_ENVIRONMENT=docker`, `.env` tùy chọn; **không** có Postgres, migrate, proxy | `docker-compose.yml` |
 | Bảo vệ cấu hình | Production thiếu DB → từ chối khởi động; danh tính dev bị chặn **chỉ** khi `environment == "production"`. `environment` là chuỗi tự do, mặc định `local`: giá trị `docker` của Compose nằm ngoài cổng (fail-open, DR-H03) | `api/main.py` `create_app`, `core/config.py` |
 | CI | Ruff, pytest với Postgres 16 bắt buộc, eval, render Mermaid | `.github/workflows/ci.yml` |
-| Build Docker | ⚠️ **Chưa kiểm** trong các đợt gần đây (Docker daemon không chạy trên máy dev) | — |
+| Build Docker | ✅ Kiểm trong CI mỗi push (job `docker`: hadolint, build, chạy với PostgreSQL 16, đăng nhập, restart, healthcheck, Compose dev) | `scripts/docker_smoke.sh`, [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175) |
 
 ## 2. Topology mục tiêu
 

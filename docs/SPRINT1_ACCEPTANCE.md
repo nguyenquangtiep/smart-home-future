@@ -1,8 +1,9 @@
 # Sprint 1: kết quả nghiệm thu
 
 > **Tóm tắt (2026-11-24).** P0-06b (cấu hình nhà trong PostgreSQL) và P0-07 (đăng nhập, RBAC) đã có code. 13 tiêu chí AC-06 và
-> 20 tiêu chí AC-07 đều có test chạy trên PostgreSQL thật; DR-H03 và DR-H08 đóng bằng test. **Chưa kiểm:** Argon2id trên máy
-> đích (M-07-1), Docker (daemon không chạy), Home Assistant, thiết bị thật. Nguồn thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md),
+> 20 tiêu chí AC-07 đều có test chạy trên PostgreSQL thật; DR-H03 và DR-H08 đóng bằng test. Đợt nghiệm thu bổ sung sửa F1
+> (Dockerfile), F2 (throttle đăng nhập dưới tải đồng thời) và kiểm Docker trong CI (F3). **Còn mở:** Argon2id trên máy đích
+> (M-07-1, PENDING TARGET HARDWARE), Docker trên máy dev, Home Assistant, thiết bị thật. Nguồn thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md),
 > [LLD P0-07](lld/P0-07_AUTH_RBAC.md).
 
 ```mermaid
@@ -67,15 +68,39 @@ python -m pytest -rs
 | AC-07-19 | `test_migration_0003_keeps_older_data_on_downgrade` | ✅ |
 | AC-07-20 | `test_static_source_matches_the_old_member_dict`, `test_membership_source_reads_the_database_every_time`, `test_membership_source_hides_disabled_users` | ✅ |
 
+## Nghiệm thu bổ sung (2026-11-24): F1, F2, F3
+
+| Finding | Mức | Trước | Nguyên nhân gốc | Sửa | Bằng chứng | Sau |
+|---|---|---|---|---|---|---|
+| F1 Dockerfile | High | ❌ `docker build` hỏng | Lần sửa trước chèn chuỗi `\n` theo nghĩa đen vào lệnh `ENV` nhiều dòng (công cụ sửa file thay vì xuống dòng thật) | Sửa thành dòng nối `\` đúng; gộp hai `RUN` (hadolint DL3059) | `tests/unit/test_dockerfile.py` (5 test: đạt trên file đã sửa, **3 lỗi trên file cũ**); `docker build` và kiểm biến trong container ở [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175) | ✅ |
+| F2 Throttle đăng nhập | High | ❌ 20 lần thử đồng thời đều được kiểm mật khẩu (giới hạn 5); 40 lần từ một IP đều được kiểm (giới hạn 30) | "Đọc số lần sai → xác minh Argon2id (~90 ms) → ghi" là ba bước rời nhau: mọi request đồng thời đọc cùng một số đếm thấp | `reserve_attempt`: **một** transaction ngắn lấy advisory lock theo email rồi IP (luôn theo thứ tự này, không deadlock), đếm, rồi chèn lần thử như **thất bại** trước khi xác minh; khóa nhả lúc commit nên không giữ khóa khi Argon2id chạy. Thành công thì `finish_attempt` đổi thành `succeeded`. Áp dụng cả đổi mật khẩu | `tests/integration/test_login_rate_limit_concurrency.py` (5 test, mỗi lần thử một kết nối PostgreSQL riêng): **4 lỗi trước khi sửa**, đạt sau khi sửa | ✅ |
+| F3 Docker runtime | High | ⛔ chưa kiểm (Docker Desktop trên máy dev không chạy) | Máy dev: Docker Desktop crash khi khởi động (socket `dockerInference` cũ không xóa được) | Thêm `scripts/docker_smoke.sh` và job `docker` trong CI (hadolint + smoke test) | [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175), commit `06a2c6d`: 33 kiểm tra đạt (bảng dưới) | ✅ trong CI · ⛔ máy dev |
+
+Smoke test Docker (job `docker`, runner Linux, chỉ publish cổng `127.0.0.1`):
+
+| Nhóm | Kiểm tra đạt |
+|---|---|
+| Image | build; `SMARTHOME_ENVIRONMENT=production`; uid 10001 (non-root); Python 3.12; không có `.env` hay biến dạng secret |
+| Fail-closed | image `production` từ chối khởi động khi thiếu PostgreSQL, và khi thiếu `SMARTHOME_ALLOWED_ORIGINS` |
+| PostgreSQL 16 | migration 0001–0003; `status` = 3; `seed-demo`; `create-owner --password-stdin` |
+| App (production, đăng nhập thật) | `/health`; `/docs` = 404; API không phiên = 401; `X-Dev-User` bị bỏ qua; login từ Origin lạ = 403; login = 200 với cookie `HttpOnly; Secure; SameSite=Strict`; đọc 10 thiết bị; ghi thiếu CSRF = 403; ghi đủ = 202 và lệnh được xác minh |
+| Restart | phiên, lịch sử lệnh và cấu hình nhà còn nguyên; `HEALTHCHECK` = healthy |
+| Compose dev | `docker compose config`; app trả `/health`; chỉ publish `127.0.0.1:8000` |
+
+Compose dev hiện tại chỉ có app, nhà mẫu trong bộ nhớ. **Topology production (proxy TLS, PostgreSQL, backup, migrate) là P0-17, chưa kiểm chứng.**
+
 ## M-07-1: Argon2id
 
 | Thông số | Giá trị |
 |---|---|
 | Tham số | `time_cost=3`, `memory_cost=64 MiB`, `parallelism=2` (đúng LLD) |
-| Máy đo | máy phát triển Windows 11, Intel 12 luồng (không phải máy đích) |
-| Băm | trung vị **88 ms** (78–116, 12 lần) |
-| Xác minh | trung vị **90 ms** (80–106, 12 lần) |
-| Đánh giá | Hơi dưới dải kỳ vọng 100 ms–1 s của LLD. Máy đích (NUC, Raspberry Pi…) thường chậm hơn nên có thể vào dải. **Chưa chỉnh tham số**: cần đo lại trên máy đích rồi mới quyết định tăng `time_cost` |
+| Trạng thái | **PENDING TARGET HARDWARE**: chưa có máy triển khai cuối; phải đo trước Deployment/Pilot (P0-17, P0-18). Người phụ trách: chủ dự án (cung cấp máy) |
+| Công cụ | `python scripts/bench_argon2.py --runs 30 --warmup 3 --json` (không in mật khẩu hay hash) |
+| Máy đo (tham khảo) | máy phát triển Windows 11, Intel Core thế hệ 11 (Family 6 Model 141), 12 luồng, 15,8 GiB RAM, Python 3.12.6. **Không phải máy đích** |
+| Băm | p50 **79,9 ms**, p95 124,2 ms (min 70,1, max 144,7; 30 lần sau 3 lần khởi động) |
+| Xác minh | p50 **84,5 ms**, p95 118,2 ms (min 70,2, max 126,1) |
+| Event loop | trễ tối đa 6,6 ms khi 5 phép xác minh chạy đồng thời (chạy trong thread pool) |
+| Đánh giá | Dưới dải 100 ms–1 s của LLD trên máy dev nhanh. **Không chỉnh tham số** dựa trên máy dev hay CI; quyết định sau khi đo trên máy đích. Tiêu chí đóng: p50 xác minh trên máy đích trong 100 ms–1 s, hoặc tham số được chỉnh và đo lại |
 
 ## Quyết định khi triển khai (khác hoặc bổ sung LLD)
 
@@ -93,8 +118,9 @@ python -m pytest -rs
 
 | Mục | Trạng thái |
 |---|---|
-| Argon2id trên máy đích | Chưa đo (M-07-1) |
-| `docker compose up`, build image | **Chưa kiểm**: Docker daemon không chạy lúc triển khai. Chỉ `docker compose config` hợp lệ |
+| Argon2id trên máy đích | PENDING TARGET HARDWARE (M-07-1) |
+| `docker build`, `docker compose up` | ✅ trong CI ([CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175)). ⛔ Trên máy dev: Docker Desktop crash khi khởi động, chưa chạy được |
+| Topology production (proxy TLS, PostgreSQL, backup) | Chưa có, P0-17 |
 | Home Assistant, thiết bị thật, TLS, hiệu năng dưới tải | Chưa có (P0-09, P0-17) |
 | WebSocket, UI đăng nhập | Ngoài Sprint 1 (P0-08, P0-11) |
 | Ghi cấu hình lúc app chạy | Chưa có: cấu hình chỉ ghi khi app dừng (D-06-8); P0-13 |

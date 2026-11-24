@@ -1,8 +1,8 @@
 # Báo cáo tiến độ
 
 > **Tóm tắt (2026-11-24).** Sprint 1 xong: cấu hình nhà lưu trong PostgreSQL, đăng nhập thật (phiên, CSRF, Argon2id), RBAC động
-> theo nhà, 428 test đạt với Postgres bắt buộc. **Chưa** có web UI, 3D, Home Assistant, thiết bị thật; Argon2id chưa đo trên
-> máy đích, Docker chưa kiểm. Việc tiếp theo: **Sprint 2 (P0-08 WebSocket, P0-09 Home Assistant)**.
+> theo nhà, 438 test đạt với Postgres bắt buộc. **Chưa** có web UI, 3D, Home Assistant, thiết bị thật; Argon2id chưa đo trên
+> máy đích. Docker build và runtime đã kiểm trong CI. Việc tiếp theo: **Sprint 2 (P0-08 WebSocket, P0-09 Home Assistant)**.
 
 ## 1. Executive Summary
 
@@ -11,7 +11,7 @@
 | ✅ **Đã xong** | P0-01 … P0-07 (mô hình thiết bị, policy, execution, simulator, REST API, lưu bền gồm cấu hình nhà, đăng nhập và RBAC); 2 vòng hardening; tiêu chuẩn Visual-first; Sprint 1 ([nghiệm thu](SPRINT1_ACCEPTANCE.md)) |
 | 🔧 **Đang làm** | Không có task P0 nào đang mở |
 | 📋 **Còn lại** | 11 task P0 chưa làm (P0-08 … P0-18) |
-| ⚠️ **Blocker / rủi ro** | Không còn Critical. High: Argon2id chưa đo trên máy đích; Docker Compose chưa kiểm (daemon không chạy lúc triển khai); chưa có TLS. Cần thông tin Home Assistant và thiết bị pilot cho P0-09 |
+| ⚠️ **Blocker / rủi ro** | Không còn Critical. High: Argon2id chưa đo trên máy đích (PENDING TARGET HARDWARE); chưa có TLS và topology production (P0-17). Cần thông tin Home Assistant và thiết bị pilot cho P0-09 |
 | ➡️ **Tiếp theo** | LLD P0-08 rồi Sprint 2: P0-08 WebSocket, P0-09 Home Assistant |
 
 ### Tiến độ P0
@@ -57,15 +57,15 @@ timeline
 | `72ee113` | 188 | `███████████████████████████` | ✅ success |
 
 *Hình 4. 0 test lỗi, 0 bỏ qua trên CI ở mọi commit. Từ `72ee113` gồm cả 52–53 test tài liệu. Nguồn: `python -m pytest -q`
-trên máy và log của `gh run view`. Số test hiện tại (428, gồm 83 test tài liệu) và kết quả render Mermaid: xem IMPLEMENTATION_LOG.*
+trên máy và log của `gh run view`. Số test hiện tại (438, gồm 83 test tài liệu) và kết quả render Mermaid: xem IMPLEMENTATION_LOG.*
 
 ### Rủi ro
 
 | Mức | Rủi ro chính |
 |---|---|
 | ⛔ Critical | Không có |
-| 🔴 High | Argon2id chưa đo trên máy đích; chưa có TLS; Compose chưa có Postgres và chưa build thử; chưa có Home Assistant và chưa kiểm thiết bị thật |
-| 🟠 Medium | Audit có thể thiếu khi DB gián đoạn; xác minh `state_match` phụ thuộc đồng hồ; chưa có rate limit |
+| 🔴 High | Argon2id chưa đo trên máy đích; chưa có TLS; Compose dev chưa có Postgres (P0-17); chưa có Home Assistant và chưa kiểm thiết bị thật |
+| 🟠 Medium | Audit có thể thiếu khi DB gián đoạn; xác minh `state_match` phụ thuộc đồng hồ; rate limit chỉ cho đăng nhập |
 | 🟡 Low | Lệnh chờ hết hạn nằm trong bộ nhớ |
 
 *Hình 5. Ma trận đầy đủ theo khu vực: [SECURITY_AND_SAFETY.md §7](SECURITY_AND_SAFETY.md#7-rủi-ro-còn-mở).*

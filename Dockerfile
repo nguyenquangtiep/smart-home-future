@@ -13,9 +13,8 @@ WORKDIR /app
 
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install .
-
-RUN useradd --create-home --uid 10001 app
+RUN pip install . \
+    && useradd --create-home --uid 10001 app
 USER app
 
 EXPOSE 8000

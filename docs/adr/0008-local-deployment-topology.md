@@ -6,7 +6,7 @@
 
 - `docker-compose.yml` chỉ có service `api`, không có Postgres, không có bước migrate, đặt `SMARTHOME_ENVIRONMENT=docker` → chạy
   bằng Docker thì lệnh và audit **không bền**. (Finding DR-H04.)
-- Build Docker chưa được kiểm trong các đợt gần đây (Docker daemon không chạy trên máy dev).
+- Build Docker và chạy image với PostgreSQL được kiểm trong CI (`scripts/docker_smoke.sh`, từ 2026-11-24); topology đầy đủ của ADR này chưa kiểm.
 - Xác minh `state_match` cần đồng hồ chính xác (ADR 0003). Cookie `Secure` cần HTTPS (ADR 0005).
 
 ## Phương án

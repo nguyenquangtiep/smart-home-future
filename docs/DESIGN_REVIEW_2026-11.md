@@ -10,14 +10,14 @@
 > **Cập nhật 2026-11-24 (sau triển khai Sprint 1).** P0-06b và P0-07 đã có code và test trên PostgreSQL thật
 > ([SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md)). Đóng bằng test: DR-H01, DR-H02, DR-H03, DR-H08, DR-M09, DR-M10, DR-M15, DR-L07, DR-L08.
 > **Development Ready ✅, Test Ready ✅. Production Ready vẫn ❌**: chưa có Home Assistant, web, môi trường triển khai, TLS;
-> Docker chưa kiểm (daemon không chạy lúc triển khai); Argon2id chưa đo trên máy đích.
+> Argon2id chưa đo trên máy đích. Đợt nghiệm thu bổ sung: F1 (Dockerfile), F2 (throttle đồng thời) đã sửa; Docker kiểm trong CI ([CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175)).
 
 | Mức sẵn sàng | Kết quả | Căn cứ |
 |---|---|---|
 | **Design Ready** (Sprint 1) | ✅ | LLD v2, ADR có mô hình mối đe dọa, DDL đã thử, không còn mâu thuẫn thiết kế đã biết |
 | **Development Ready** | ✅ | Chủ dự án đã duyệt ADR 0005 và ADR 0006 (2026-11-23); C1, C2 hoàn thành |
 | **Test Ready** (Sprint 1) | ✅ | 33 tiêu chí nghiệm thu (13 + 20) đều có loại test; CI chạy Postgres bắt buộc. Còn phải tạo fixture đăng nhập qua `https://` (S1-09) và đo Argon2id thủ công (M-07-1) |
-| **Production Ready** | ❌ | Chưa có đăng nhập, Home Assistant, web, môi trường triển khai; Docker chưa kiểm; chưa thử thiết bị thật |
+| **Production Ready** | ❌ | Chưa có đăng nhập, Home Assistant, web, môi trường triển khai, TLS; chưa thử thiết bị thật |
 
 ```mermaid
 flowchart LR
@@ -216,8 +216,8 @@ ràng buộc cho bước sau, **không chặn** việc bắt đầu code. Bản 
 | C1 | Chủ dự án quyết định D1–D6 của [ADR 0006](adr/0006-home-configuration-source-of-truth.md#5-quyết-định-cần-chủ-dự-án) | Code S1-02, S1-03, S1-04 | ✅ Đã duyệt 2026-11-23 |
 | C2 | Chủ dự án quyết định D1–D6 của [ADR 0005](adr/0005-session-auth-csrf.md#6-quyết-định-cần-chủ-dự-án), gồm dependency `argon2-cffi` | Code S1-01, S1-05…S1-09 | ✅ Đã duyệt 2026-11-23, gồm `argon2-cffi` |
 | C3 | DR-H03 và DR-H08 đóng bằng test (AC-07-14, AC-07-11) | Đóng P0-07 | ✅ 2026-11-24: `test_environment_gate.py`, `test_membership_source.py`, `test_auth_api.py` |
-| C4 | Đo Argon2id trên máy đích, ghi kết quả (M-07-1) | Đóng P0-07 | 🟡 đo trên máy dev: băm 88 ms, xác minh 90 ms (trung vị 12 lần), hơi dưới dải 100 ms–1 s; **máy đích chưa đo** ([SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md#m-07-1-argon2id)) |
-| C5 | Đạt đủ [tiêu chí thoát Sprint 1](ROADMAP.md#sprint-1-p0-06b-và-p0-07-chốt-thiết-kế-2026-11-23) | Ghi P0-06 hoặc P0-07 là "Đạt" | ✅ đạt, trừ mục 2 (M-07-1 máy đích) và mục 3 phần Docker (daemon không chạy, chưa kiểm) |
+| C4 | Đo Argon2id trên máy đích, ghi kết quả (M-07-1) | Đóng P0-07 | 🟡 PENDING TARGET HARDWARE: benchmark sẵn sàng (`scripts/bench_argon2.py`), số tham khảo máy dev ở [SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md#m-07-1-argon2id); phải đo trước P0-17 |
+| C5 | Đạt đủ [tiêu chí thoát Sprint 1](ROADMAP.md#sprint-1-p0-06b-và-p0-07-chốt-thiết-kế-2026-11-23) | Ghi P0-06 hoặc P0-07 là "Đạt" | ✅ đạt, trừ M-07-1 trên máy đích (điều kiện trước triển khai) |
 | C6 | Không triển khai ra ngoài máy dev cho tới khi xong P0-07 và P0-17 (DR-H03, DR-H04) | Mọi triển khai | ⏳ ràng buộc liên tục |
 | C7 | Viết LLD P0-08 và LLD P0-14 trước khi code các task đó | Sprint 2 và sau | ⏳ trước Sprint 2 |
 

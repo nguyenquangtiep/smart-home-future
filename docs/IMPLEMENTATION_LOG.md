@@ -2,6 +2,20 @@
 
 Mỗi đợt ghi: thay đổi, lý do, kiểm chứng, phần chưa xong. Mới nhất ở trên.
 
+## 2026-11-24 · Đợt 9: nghiệm thu bổ sung Sprint 1 (F1, F2, F3)
+
+Chi tiết: [SPRINT1_ACCEPTANCE §Nghiệm thu bổ sung](SPRINT1_ACCEPTANCE.md#nghiệm-thu-bổ-sung-2026-11-24-f1-f2-f3). Nhánh
+`fix/sprint1-acceptance-hardening` từ `main` = `b252133`.
+
+| Mục | Kết quả |
+|---|---|
+| F1 | `Dockerfile` có `\n` theo nghĩa đen trong `ENV` nhiều dòng (build hỏng). Sửa; test tĩnh `test_dockerfile.py` (3 lỗi trên file cũ, đạt trên file mới); hadolint trong CI |
+| F2 | Tái hiện được race: 20 lần đăng nhập sai đồng thời đều được kiểm mật khẩu (giới hạn 5), 40 lần từ một IP đều được kiểm (giới hạn 30). Sửa bằng `reserve_attempt` (một transaction, advisory lock email rồi IP, giữ chỗ trước khi xác minh) và `finish_attempt`. 5 test đồng thời trên PostgreSQL thật: 4 lỗi trước, đạt sau |
+| F3 | Docker Desktop trên máy dev crash khi khởi động (không sửa cài đặt của chủ máy). Thêm job `docker` trong CI: [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175), 33 kiểm tra đạt (build, production fail-closed, migration, đăng nhập, CSRF, restart, healthcheck, Compose dev chỉ `127.0.0.1`) |
+| Argon2id | `scripts/bench_argon2.py`: máy dev xác minh p50 84,5 ms, p95 118,2 ms, event loop trễ tối đa 6,6 ms. M-07-1: PENDING TARGET HARDWARE |
+| Kiểm chứng | pytest Postgres bắt buộc: **438 passed, 0 failed, 0 skipped** (không Postgres: 316 passed, 122 skipped); ruff đạt; eval 7/7; Mermaid render; CI `checks` và `docker` đều đạt |
+| Còn mở | Argon2id trên máy đích; topology production (P0-17); Docker trên máy dev |
+
 ## 2026-11-24 · Đợt 8: Sprint 1 (P0-06b, P0-07)
 
 Nghiệm thu từng tiêu chí: [SPRINT1_ACCEPTANCE.md](SPRINT1_ACCEPTANCE.md). Thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md),

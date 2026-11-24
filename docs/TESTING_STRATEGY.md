@@ -1,6 +1,7 @@
 # Testing Strategy
 
-> **Tóm tắt.** 428 test (255 unit, 165 integration, 8 eval); 117 test cần Postgres và **bắt buộc** chạy trong CI. Mọi
+> **Tóm tắt.** 438 test (260 unit, 170 integration, 8 eval); 122 test cần Postgres và **bắt buộc** chạy trong CI. Image
+> Docker được build và chạy thử với PostgreSQL trong CI. Mọi
 > sơ đồ Mermaid được render bằng renderer thật trong CI. Chỉ dùng simulator, không thử trên
 > thiết bị thật.
 
@@ -18,7 +19,10 @@ Cập nhật 2026-11-24 (sau Sprint 1).
 | Tài liệu (render thật) | mermaid-cli 11.17.1 | `scripts/render_mermaid.py` | Render từng khối Mermaid ra SVG; lỗi cú pháp làm CI đỏ; SVG lưu thành artifact `mermaid-svg` |
 | Cấu hình nhà, môi trường | pytest + Postgres thật | `test_config_store.py`, `test_startup.py`, `tests/unit/test_environment_gate.py`, `test_home_config_validation.py`, `test_migrations_frozen.py` | Hợp đồng `HomeConfigStore` trên bộ nhớ và Postgres, khóa ngoại tổng hợp, đồng thời, khởi động, seed-demo, cổng môi trường |
 | Đăng nhập, RBAC | pytest + Postgres thật, đồng hồ giả | `test_auth_service.py`, `test_auth_api.py`, `test_passwords.py`, `test_membership_source.py` | Phiên, throttle, CSRF, default-deny, cách ly nhà, ma trận quyền, RBAC động, last-owner, CLI |
-| Tổng (2026-11-24) | | | **428 đạt, 0 lỗi, 0 bỏ qua** khi có Postgres; không có thì **311 đạt, 117 bỏ qua**. CI đặt `SMARTHOME_REQUIRE_POSTGRES=1` nên thiếu DB là **lỗi**, không bỏ qua |
+| Đồng thời (Postgres thật) | pytest, mỗi request một kết nối | `test_login_rate_limit_concurrency.py` | 20–40 lần đăng nhập cùng lúc: giới hạn email/IP đúng, người dùng đúng mật khẩu không bị khóa oan, `Retry-After` |
+| Docker | hadolint + `scripts/docker_smoke.sh` (job `docker` trong CI) | `Dockerfile`, `docker-compose.yml`, `tests/unit/test_dockerfile.py` | Build, biến môi trường, non-root, fail-closed, migration, đăng nhập, CSRF, restart, healthcheck, Compose dev |
+| Hiệu năng (thủ công) | `scripts/bench_argon2.py` | — | Argon2id p50/p95 và độ trễ event loop; không phải test, không có ngưỡng |
+| Tổng (2026-11-24) | | | **438 đạt, 0 lỗi, 0 bỏ qua** khi có Postgres; không có thì **316 đạt, 122 bỏ qua**. CI đặt `SMARTHOME_REQUIRE_POSTGRES=1` nên thiếu DB là **lỗi**, không bỏ qua |
 
 Test async chạy bằng `asyncio.run` trong test đồng bộ, không cần plugin thêm. Test dùng simulator với độ trễ 20 ms và
 timeout xác minh 0,2–0,3 s để nhanh.
@@ -43,18 +47,18 @@ python scripts/render_mermaid.py --out mermaid-out
 ```
 
 ```mermaid
-pie showData title Test theo khu vực (428)
+pie showData title Test theo khu vực (438)
     "Đường điều khiển và an toàn" : 81
     "Tài liệu" : 83
     "API" : 27
     "Agent mẫu và eval" : 18
     "Persistence (Postgres)" : 71
-    "Đăng nhập và RBAC" : 80
-    "Cấu hình và môi trường" : 68
+    "Đăng nhập và RBAC" : 85
+    "Cấu hình và môi trường" : 73
 ```
 *Hình 1. Phân bố test. Nguồn: `python -m pytest --collect-only -q`, 2026-11-24 (sau Sprint 1). Đường điều khiển và an
 toàn = `test_capabilities_and_state`, `test_policy`, `test_execution`, `test_hardening`, `test_hardening_round2`,
-`test_issue_repro`, `test_membership_source`; persistence = `test_persistence`, `test_config_store`, `test_startup`; đăng nhập = `test_auth_api`, `test_auth_service`, `test_passwords`; cấu hình và môi trường = `test_environment_gate`, `test_home_config_validation`, `test_migrations_frozen`; tài liệu = `test_docs`; API = `test_api`, `test_homes_api`; agent = `test_graph`, `test_tools`,
+`test_issue_repro`, `test_membership_source`; persistence = `test_persistence`, `test_config_store`, `test_startup`; đăng nhập = `test_auth_api`, `test_auth_service`, `test_passwords`, `test_login_rate_limit_concurrency`; cấu hình và môi trường = `test_environment_gate`, `test_home_config_validation`, `test_migrations_frozen`, `test_dockerfile`; tài liệu = `test_docs`; API = `test_api`, `test_homes_api`; agent = `test_graph`, `test_tools`,
 `tests/eval`.*
 
 ## 2. Kim tự tháp mục tiêu

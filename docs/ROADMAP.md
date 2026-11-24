@@ -1,7 +1,7 @@
 # Roadmap
 
 > **Tóm tắt.** P0: **7/18 task đạt** (39 %), 11 chưa làm. **Sprint 1 (P0-06b, P0-07) đã có code và test** trên PostgreSQL thật
-> ([kết quả nghiệm thu](SPRINT1_ACCEPTANCE.md)). Còn mở: đo Argon2id trên máy đích, kiểm Docker. Việc tiếp theo: Sprint 2 (P0-08, P0-09).
+> ([kết quả nghiệm thu](SPRINT1_ACCEPTANCE.md)). Còn mở: đo Argon2id trên máy đích (trước triển khai). Việc tiếp theo: Sprint 2 (P0-08, P0-09).
 
 Cập nhật 2026-11-24. Task xếp theo dependency: không làm frontend trước khi có API, không làm tool AI trước khi có hợp đồng
 điều khiển ổn định.
@@ -191,8 +191,8 @@ flowchart LR
 | # | Tiêu chí |
 |---|---|
 | 1 | ✅ Toàn bộ AC-06-1…13 và AC-07-1…20 có test đạt với Postgres bắt buộc (không skip) trên máy phát triển; CI chạy cùng cấu hình (xem Pull Request) |
-| 2 | 🟡 M-07-1 đã đo trên máy phát triển (băm 88 ms, xác minh 90 ms); **máy đích chưa đo** |
-| 3 | ✅ DR-H03 và DR-H08 đóng bằng test. ⛔ `docker compose up` **chưa kiểm** (Docker daemon không chạy); `docker compose config` hợp lệ |
+| 2 | 🟡 M-07-1 **PENDING TARGET HARDWARE**: benchmark `scripts/bench_argon2.py` sẵn sàng, đo tham khảo trên máy dev (xác minh p50 84,5 ms); phải đo trên máy đích trước P0-17/P0-18 |
+| 3 | ✅ DR-H03 và DR-H08 đóng bằng test. ✅ `docker build` và `docker compose up` (Compose dev) chạy trong CI ([CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175)); chưa chạy được trên máy dev (Docker Desktop crash) |
 | 4 | ✅ Tài liệu đồng bộ với code: DATABASE_DESIGN, ARCHITECTURE, TRACEABILITY chuyển DESIGNED → IMPLEMENTED có dẫn chứng |
 | 5 | ✅ Mọi AC của P0-06 và P0-07 đều có test; hai mục còn mở ở trên ghi rõ, không che |
 
@@ -214,6 +214,6 @@ có lịch thật.*
 1. ✅ Chủ dự án đã duyệt D1–D6 của [ADR 0005](adr/0005-session-auth-csrf.md#6-quyết-định-cần-chủ-dự-án) và
    [ADR 0006](adr/0006-home-configuration-source-of-truth.md#5-quyết-định-cần-chủ-dự-án) theo khuyến nghị (2026-11-23).
 2. ✅ Sprint 1 đã triển khai ([nghiệm thu](SPRINT1_ACCEPTANCE.md)).
-3. Còn mở từ Sprint 1: đo Argon2id trên máy đích (M-07-1); build và chạy Docker Compose trên máy có Docker daemon.
+3. Còn mở từ Sprint 1: đo Argon2id trên máy đích (M-07-1, trước P0-17). Docker đã kiểm trong CI.
 4. Trước Sprint 2: viết LLD P0-08 (WebSocket) và có quyền truy cập Home Assistant của nhà pilot (P0-09, [ADR 0004](adr/0004-home-assistant-integration-layer.md)).
 5. Chủ dự án cần cung cấp: danh sách thiết bị pilot, HA đã cài chưa, máy chạy backend trong nhà.
