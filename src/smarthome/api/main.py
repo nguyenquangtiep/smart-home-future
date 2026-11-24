@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from smarthome import __version__
 from smarthome.api.deps import get_graph
-from smarthome.api.routes import agent, health, homes
+from smarthome.api.routes import agent, health, homes, simulator
 from smarthome.control.execution import ControlService
 from smarthome.core.config import Settings, get_settings
 from smarthome.core.logging import configure_logging, get_logger
@@ -69,10 +69,6 @@ async def build_control(settings: Settings, store: CommandStore) -> ControlServi
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
-    if settings.dev_identity_enabled and settings.environment == "production":
-        raise RuntimeError("SMARTHOME_DEV_IDENTITY_ENABLED must not be used in production")
-    if settings.database_url is None and settings.environment == "production":
-        raise RuntimeError("SMARTHOME_DATABASE_URL is required in production")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -95,6 +91,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         lifespan=lifespan,
         default_response_class=UTF8JSONResponse,
+        # Interactive docs and the schema are for local/test only (ADR 0005).
+        docs_url="/docs" if settings.permissive else None,
+        redoc_url="/redoc" if settings.permissive else None,
+        openapi_url="/openapi.json" if settings.permissive else None,
     )
     app.state.settings = settings
 
@@ -118,6 +118,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(agent.router)
     app.include_router(homes.router)
+    if settings.permissive:
+        app.include_router(simulator.router)
     return app
 
 

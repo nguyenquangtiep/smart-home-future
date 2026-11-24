@@ -49,7 +49,7 @@ def test_auth_disabled_by_default() -> None:
 
 def test_dev_identity_refused_in_production() -> None:
     with pytest.raises(RuntimeError):
-        create_app(_settings(environment="production"))
+        _settings(environment="production")
 
 
 def test_non_member_and_unknown_home_get_404(client: TestClient) -> None:
