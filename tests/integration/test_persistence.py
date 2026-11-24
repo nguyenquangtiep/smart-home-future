@@ -216,13 +216,14 @@ def test_restart_keeps_history_interrupts_in_flight_and_never_resends(harness: H
 def test_migrations_upgrade_downgrade_and_reupgrade(empty_pg_dsn: str) -> None:
     with connect(empty_pg_dsn) as conn:
         assert migrate.current_version(conn) == 0
-        assert migrate.upgrade(conn) == [1]
-        assert migrate.current_version(conn) == migrate.latest_version() == 1
+        everything = list(range(1, migrate.latest_version() + 1))
+        assert migrate.upgrade(conn) == everything
+        assert migrate.current_version(conn) == migrate.latest_version()
         assert migrate.upgrade(conn) == []  # idempotent
-        assert migrate.downgrade(conn, 0) == [1]
+        assert migrate.downgrade(conn, 0) == everything[::-1]
         exists = conn.execute("SELECT to_regclass('commands') IS NOT NULL AS e").fetchone()
         assert exists["e"] is False
-        assert migrate.upgrade(conn) == [1]
+        assert migrate.upgrade(conn) == everything
 
 
 def test_app_refuses_unmigrated_database(empty_pg_dsn: str) -> None:
