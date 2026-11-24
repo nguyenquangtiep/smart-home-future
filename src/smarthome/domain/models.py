@@ -1,6 +1,7 @@
 """Home structure: home, floors, rooms, members and devices (with their 3D placement)."""
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -61,8 +62,8 @@ class Device(_Frozen):
     model: str
     capabilities: tuple[Capability, ...]
     placement: Placement | None = None
-    gateway: str  # which gateway adapter controls it, e.g. "simulator", "home_assistant"
-    external_ref: str  # the device's id inside that gateway
+    gateway: str  # ID of the gateway *instance* (GatewayConnection.id), not the adapter name
+    external_ref: str  # the device's id inside that gateway instance
 
     def capability(self, kind: CapabilityKind) -> Capability | None:
         return next((c for c in self.capabilities if c.kind is kind), None)
@@ -82,3 +83,31 @@ class Home(_Frozen):
     rooms: tuple[Room, ...]
     # True when the home and its devices come from the built-in simulator seed.
     simulated: bool = False
+
+
+GatewayKind = Literal["simulator", "home_assistant"]
+
+
+class GatewayConnection(_Frozen):
+    """One configured gateway instance. Owned by exactly one home; its ``id`` is global.
+
+    ``Device.gateway`` holds this ID, so two homes that both use Home Assistant never share a
+    key. ``secret_ref`` names an environment variable or secret, never the secret itself.
+    """
+
+    id: str
+    home_id: str
+    kind: GatewayKind
+    name: str
+    url: str | None = None
+    secret_ref: str | None = None
+    enabled: bool = True
+
+
+class HomeConfig(_Frozen):
+    """One home as one consistent snapshot: structure, gateways and active devices."""
+
+    home: Home
+    version: int = 1
+    gateways: tuple[GatewayConnection, ...]
+    devices: tuple[Device, ...]  # active devices only; each carries its placement

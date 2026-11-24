@@ -6,7 +6,6 @@ from typing import Annotated, Literal
 from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-
 Environment = Literal["local", "test", "staging", "production"]
 # Environments where in-memory storage, the dev identity, seed-demo, OpenAPI docs and the
 # simulator control route are allowed. Everything else is the strict (fail-closed) mode.
@@ -100,7 +99,7 @@ class Settings(BaseSettings):
                 raise ConfigError("SMARTHOME_COOKIE_SECURE=false is only allowed in local/test")
             if not self.allowed_origins:
                 raise ConfigError(
-                    f"SMARTHOME_ALLOWED_ORIGINS is required when environment is {self.environment!r}"
+                    f"SMARTHOME_ALLOWED_ORIGINS is required in the {self.environment!r} environment"
                 )
         return self
 

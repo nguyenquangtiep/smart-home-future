@@ -6,9 +6,20 @@ Matches the P0 pilot shape (one home, ~2 rooms, 8-12 devices). Every device here
 
 from smarthome.domain import capabilities as caps
 from smarthome.domain.capabilities import CapabilityKind, Role, SafetyClass
-from smarthome.domain.models import Device, DeviceType, Floor, Home, Member, Placement, Room
+from smarthome.domain.models import (
+    Device,
+    DeviceType,
+    Floor,
+    GatewayConnection,
+    Home,
+    HomeConfig,
+    Member,
+    Placement,
+    Room,
+)
 
 HOME_ID = "home-demo"
+GATEWAY_ID = "simulator"  # the demo home's one simulator instance (global ID, owned by the demo)
 LIVING = "room-living"
 BEDROOM = "room-bedroom"
 
@@ -48,7 +59,7 @@ def build_demo_home() -> tuple[Home, list[Member], list[Device]]:
             model=f"sim-{type_.value}",
             capabilities=capabilities,
             placement=Placement(room_id=room, position=pos),
-            gateway="simulator",
+            gateway=GATEWAY_ID,
             external_ref=f"sim.{id_}",
         )
 
@@ -142,6 +153,14 @@ def build_demo_home() -> tuple[Home, list[Member], list[Device]]:
         ),
     ]
     return home, members, devices
+
+
+def build_demo_config() -> tuple[HomeConfig, list[Member]]:
+    """The demo home as a ``HomeConfig`` (what the config store holds) plus its members."""
+    home, members, devices = build_demo_home()
+    gateway = GatewayConnection(id=GATEWAY_ID, home_id=HOME_ID, kind="simulator", name="Simulator")
+    config = HomeConfig(home=home, version=1, gateways=(gateway,), devices=tuple(devices))
+    return config, members
 
 
 INITIAL_STATE: dict[str, dict[CapabilityKind, bool | float | str]] = {
