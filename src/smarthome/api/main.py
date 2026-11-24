@@ -10,11 +10,9 @@ from fastapi.responses import JSONResponse
 from smarthome import __version__
 from smarthome.api.deps import get_graph
 from smarthome.api.routes import agent, health, homes, simulator
-from smarthome.control.execution import ControlService
+from smarthome.bootstrap import build_control, load_configs, open_config_store
 from smarthome.core.config import Settings, get_settings
 from smarthome.core.logging import configure_logging, get_logger
-from smarthome.demo_home import INITIAL_STATE, build_demo_home
-from smarthome.gateway.simulator import SimulatorGateway
 from smarthome.persistence.base import CommandStore
 
 logger = get_logger("api")
@@ -36,36 +34,6 @@ async def open_store(settings: Settings) -> CommandStore:
     return await PostgresCommandStore.open(settings.database_url.get_secret_value())
 
 
-async def build_control(settings: Settings, store: CommandStore) -> ControlService:
-    """Wire the control path. Only the simulator gateway exists today (see task P0-09)."""
-    if settings.device_gateway != "simulator":  # pragma: no cover - guarded by Settings type
-        raise RuntimeError(f"gateway {settings.device_gateway!r} is not implemented")
-    simulator = SimulatorGateway(latency_s=settings.sim_latency_s)
-    home, members, devices = build_demo_home()
-    control = ControlService(
-        homes=[home],
-        members=members,
-        devices=devices,
-        gateways={simulator.name: simulator},
-        store=store,
-        verify_timeout_s=settings.verify_timeout_s,
-        dispatch_timeout_s=settings.dispatch_timeout_s,
-        confirmation_ttl_s=settings.confirmation_ttl_s,
-        idempotency_ttl_s=settings.idempotency_ttl_s,
-        clock_skew_s=settings.verification_clock_skew_s,
-    )
-    # 1) Close out commands a previous process left unfinished (never resent).
-    recovered = await control.recover()
-    # 2) Resync device state from the gateway (the source of truth after a restart).
-    for device_id, values in INITIAL_STATE.items():
-        await simulator.report(device_id, values)
-    # 3) Record what the devices now report for each interrupted command.
-    await control.reconcile_interrupted()
-    if recovered:
-        logger.warning("recovered %d interrupted command(s)", len(recovered))
-    return control
-
-
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
@@ -74,16 +42,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_graph()  # compile once at startup
         store = await open_store(settings)
+        config_store = await open_config_store(settings)
         try:
             # Startup recovery marks unfinished commands INTERRUPTED; only safe if no other
             # instance is running against the same database.
             await store.acquire_instance_lock()
-            app.state.control = await build_control(settings, store)
+            configs = await load_configs(config_store)
+            app.state.control = await build_control(settings, store, configs)
             logger.info(
                 "startup complete gateway=%s durable=%s", settings.device_gateway, store.durable
             )
             yield
         finally:
+            await config_store.close()
             await store.close()
 
     app = FastAPI(

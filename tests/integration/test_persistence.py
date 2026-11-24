@@ -327,6 +327,7 @@ def test_gap_d_second_instance_on_same_database_is_refused(pg_dsn: str) -> None:
 
     from smarthome.api.main import create_app
     from smarthome.core.config import Settings
+    from smarthome.persistence.seed import seed_demo
 
     settings = Settings(
         _env_file=None,
@@ -336,6 +337,7 @@ def test_gap_d_second_instance_on_same_database_is_refused(pg_dsn: str) -> None:
         verify_timeout_s=10,
         database_url=pg_dsn,
     )
+    asyncio.run(seed_demo(settings))
     base = f"/api/v1/homes/{HOME_ID}"
     headers = {"X-Dev-User": "user-owner"}
     with TestClient(create_app(settings)) as first:

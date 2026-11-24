@@ -1,3 +1,4 @@
+import asyncio
 import time
 from collections.abc import Iterator
 
@@ -7,6 +8,7 @@ from fastapi.testclient import TestClient
 from smarthome.api.main import create_app
 from smarthome.core.config import Settings
 from smarthome.demo_home import HOME_ID
+from smarthome.persistence.seed import seed_demo
 
 BASE = f"/api/v1/homes/{HOME_ID}"
 OWNER = {"X-Dev-User": "user-owner"}
@@ -191,6 +193,7 @@ def test_production_requires_database() -> None:
 
 def test_command_history_survives_app_restart(pg_dsn: str) -> None:
     settings = _settings(database_url=pg_dsn)
+    asyncio.run(seed_demo(settings))
     with TestClient(create_app(settings)) as c:
         resp = c.post(
             f"{BASE}/commands",
