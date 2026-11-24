@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  # Every branch, so work branches are checked before they are merged into main.
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI database; enables the Postgres persistence/recovery tests.
+      SMARTHOME_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      # Fail (instead of silently skipping) if the Postgres tests cannot run.
+      SMARTHOME_REQUIRE_POSTGRES: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format
+        run: ruff format --check .
+
+      - name: Tests
+        run: python -m pytest -rs
+
+      - name: Eval
+        run: python eval/scripts/run_eval.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Mermaid renderer
+        run: npm install -g @mermaid-js/mermaid-cli@11.17.1
+
+      - name: Render Mermaid diagrams (real renderer)
+        run: python scripts/render_mermaid.py --out mermaid-out
+
+      - name: Upload rendered diagrams
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mermaid-svg
+          path: mermaid-out/*.svg
+          if-no-files-found: ignore

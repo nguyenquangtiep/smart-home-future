@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="title desc" lang="vi">
+  <title id="title">Smart Home Future, màn 1: Cả căn nhà (wireframe mục tiêu)</title>
+  <desc id="desc">Sơ đồ 2D nhìn từ trên xuống với hai phòng bấm được. Phòng khách đang được trỏ chuột, thẻ ghi Đèn bật, Rèm mở, 28 độ, mọi thiết bị đã xác minh. Phòng ngủ ghi Đèn tắt, chỉ xem ở bản đầu. Bảng Trợ lý bên phải ở ngữ cảnh Cả nhà: người dùng gõ Tắt đèn, Trợ lý hỏi lại phòng nào vì cả hai phòng đều có đèn.</desc>
+  <defs>
+    <style>
+      text { font-family: "Segoe UI", Roboto, Arial, sans-serif; fill: #1f2937; }
+      .logo { font-size: 19px; font-weight: 700; fill: #1d4ed8; }
+      .nav { font-size: 15px; fill: #374151; }
+      .navon { font-size: 15px; font-weight: 700; fill: #1d4ed8; }
+      .h1 { font-size: 24px; font-weight: 700; }
+      .h2 { font-size: 18px; font-weight: 700; }
+      .name { font-size: 16px; font-weight: 600; }
+      .t { font-size: 15px; }
+      .sub { font-size: 13px; fill: #6b7280; }
+      .sm { font-size: 12px; fill: #6b7280; }
+      .btn { font-size: 14px; font-weight: 600; fill: #1d4ed8; }
+      .btnw { font-size: 14px; font-weight: 600; fill: #ffffff; }
+      .pill { font-size: 12px; font-weight: 700; }
+      .sec { font-size: 12px; font-weight: 700; fill: #6b7280; letter-spacing: 0.8px; }
+    </style>
+  </defs>
+
+  <!-- Khung trang -->
+  <rect width="1280" height="800" fill="#f3f4f6"/>
+  <rect width="1280" height="56" fill="#ffffff"/>
+  <line x1="0" y1="56" x2="1280" y2="56" stroke="#e5e7eb"/>
+  <rect x="24" y="16" width="24" height="24" rx="6" fill="#1d4ed8"/>
+  <path d="M29 30 L36 23 L43 30 V36 H29 Z" fill="#ffffff"/>
+  <text x="58" y="34" class="logo">Smart Home Future</text>
+  <text x="260" y="34" class="navon">Cả nhà</text>
+  <line x1="260" y1="44" x2="308" y2="44" stroke="#1d4ed8" stroke-width="3"/>
+  <text x="340" y="34" class="nav">Sở thích</text>
+  <rect x="1040" y="12" width="120" height="32" rx="16" fill="#1d4ed8"/>
+  <text x="1100" y="33" text-anchor="middle" class="btnw">Trợ lý</text>
+  <circle cx="1210" cy="28" r="16" fill="#e0e7ff"/>
+  <text x="1210" y="32" text-anchor="middle" class="pill" style="fill:#3730a3">Bạn</text>
+
+  <text x="40" y="100" class="h1">Nhà của bạn</text>
+  <rect x="196" y="82" width="132" height="24" rx="12" fill="#fef9c3" stroke="#ca8a04"/>
+  <text x="262" y="99" text-anchor="middle" class="pill" style="fill:#854d0e">Thiết kế mục tiêu</text>
+  <text x="40" y="126" class="sub">Bấm vào một phòng để xem và điều khiển thiết bị</text>
+
+  <!-- Mặt bằng -->
+  <rect x="40" y="144" width="800" height="616" rx="12" fill="#ffffff" stroke="#e5e7eb"/>
+  <rect x="80" y="184" width="720" height="536" fill="#fafaf9" stroke="#374151" stroke-width="8"/>
+  <!-- tường ngăn có cửa -->
+  <line x1="500" y1="184" x2="500" y2="420" stroke="#374151" stroke-width="6"/>
+  <line x1="500" y1="480" x2="500" y2="720" stroke="#374151" stroke-width="6"/>
+  <path d="M500 420 A60 60 0 0 1 560 480" fill="none" stroke="#9ca3af" stroke-width="2"/>
+  <!-- lối vào -->
+  <rect x="410" y="714" width="70" height="12" fill="#fafaf9"/>
+  <path d="M410 720 L410 650 A70 70 0 0 1 480 720" fill="none" stroke="#9ca3af" stroke-width="2"/>
+  <text x="445" y="746" text-anchor="middle" class="sm">Lối vào</text>
+  <!-- cửa sổ -->
+  <rect x="76" y="290" width="8" height="120" fill="#93c5fd"/>
+  <rect x="796" y="250" width="8" height="110" fill="#93c5fd"/>
+
+  <!-- Phòng khách: đang trỏ chuột -->
+  <rect x="92" y="196" width="396" height="512" rx="6" fill="#dbeafe" fill-opacity="0.5" stroke="#2563eb" stroke-width="3"/>
+  <rect x="200" y="200" width="160" height="10" rx="2" fill="#374151"/>
+  <text x="280" y="228" text-anchor="middle" class="sm">TV</text>
+  <rect x="380" y="200" width="90" height="16" rx="4" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="425" y="232" text-anchor="middle" class="sm">Điều hòa</text>
+  <circle cx="280" cy="310" r="18" fill="#fde68a" stroke="#d97706"/>
+  <text x="280" y="344" text-anchor="middle" class="sm">Đèn</text>
+  <rect x="88" y="290" width="14" height="120" fill="#a5b4fc"/>
+  <text x="110" y="282" class="sm">Rèm</text>
+  <rect x="230" y="500" width="100" height="44" rx="6" fill="#e7e5e4" stroke="#a8a29e"/>
+  <rect x="160" y="580" width="240" height="64" rx="12" fill="#cbd5e1" stroke="#94a3b8"/>
+  <rect x="160" y="624" width="240" height="20" rx="8" fill="#94a3b8"/>
+
+  <rect x="132" y="372" width="300" height="96" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="152" y="402" class="h2">Phòng khách</text>
+  <text x="152" y="426" class="t">Đèn bật · Rèm mở · 28°C</text>
+  <circle cx="158" cy="450" r="5" fill="#16a34a"/>
+  <text x="170" y="455" class="sub">Mọi thiết bị đã xác minh</text>
+  <text x="414" y="402" text-anchor="end" class="btn">Mở →</text>
+
+  <!-- Phòng ngủ -->
+  <rect x="600" y="220" width="150" height="190" rx="8" fill="#e5e7eb" stroke="#9ca3af"/>
+  <rect x="612" y="230" width="58" height="34" rx="6" fill="#ffffff" stroke="#9ca3af"/>
+  <rect x="680" y="230" width="58" height="34" rx="6" fill="#ffffff" stroke="#9ca3af"/>
+  <rect x="640" y="630" width="140" height="70" rx="4" fill="#e7e5e4" stroke="#a8a29e"/>
+  <rect x="534" y="460" width="246" height="96" rx="10" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="554" y="490" class="h2">Phòng ngủ</text>
+  <text x="554" y="514" class="t">Đèn tắt · 25°C</text>
+  <circle cx="560" cy="538" r="5" fill="#9ca3af"/>
+  <text x="572" y="543" class="sub">Chỉ xem ở bản đầu</text>
+
+  <text x="56" y="176" class="sm">Viền xanh: phòng đang trỏ chuột, bấm để mở</text>
+
+  <!-- Trợ lý -->
+  <rect x="864" y="144" width="376" height="616" rx="12" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="888" y="180" class="h2">Trợ lý</text>
+  <rect x="956" y="162" width="136" height="26" rx="13" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="1024" y="180" text-anchor="middle" class="pill" style="fill:#374151">Ngữ cảnh: Cả nhà</text>
+
+  <rect x="1104" y="216" width="112" height="38" rx="14" fill="#1d4ed8"/>
+  <text x="1160" y="240" text-anchor="middle" class="t" style="fill:#ffffff">Tắt đèn</text>
+
+  <rect x="888" y="268" width="328" height="64" rx="14" fill="#f3f4f6"/>
+  <text x="904" y="294" class="t">Cả hai phòng đều có đèn.</text>
+  <text x="904" y="318" class="t">Bạn muốn tắt đèn ở đâu?</text>
+
+  <rect x="888" y="344" width="112" height="34" rx="17" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="944" y="366" text-anchor="middle" class="btn">Phòng khách</text>
+  <rect x="1008" y="344" width="100" height="34" rx="17" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="1058" y="366" text-anchor="middle" class="btn">Phòng ngủ</text>
+  <rect x="1116" y="344" width="100" height="34" rx="17" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="1166" y="366" text-anchor="middle" class="btn">Cả hai</text>
+  <text x="888" y="404" class="sm">Chưa thiết bị nào thay đổi cho tới khi bạn chọn.</text>
+
+  <line x1="888" y1="430" x2="1216" y2="430" stroke="#e5e7eb"/>
+  <text x="888" y="460" class="sec">THỬ NÓI</text>
+  <rect x="888" y="474" width="164" height="32" rx="16" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="970" y="495" text-anchor="middle" class="sub" style="fill:#374151">Chuẩn bị xem phim</text>
+  <rect x="1060" y="474" width="156" height="32" rx="16" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="1138" y="495" text-anchor="middle" class="sub" style="fill:#374151">Tắt đèn phòng ngủ</text>
+  <text x="888" y="536" class="sm">Mở một phòng trước để Trợ lý hiểu bạn đang nói về đâu.</text>
+
+  <text x="1216" y="676" text-anchor="end" class="sm">Giọng nói: mốc sau</text>
+  <rect x="888" y="690" width="328" height="44" rx="22" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="908" y="717" class="sub">Gõ yêu cầu…</text>
+  <circle cx="1192" cy="712" r="16" fill="#f3f4f6" stroke="#cbd5e1" stroke-dasharray="3 3"/>
+  <rect x="1188" y="702" width="8" height="13" rx="4" fill="#9ca3af"/>
+  <path d="M1184 711 a8 8 0 0 0 16 0" fill="none" stroke="#9ca3af" stroke-width="2"/>
+  <line x1="1192" y1="719" x2="1192" y2="723" stroke="#9ca3af" stroke-width="2"/>
+
+  <text x="1256" y="788" text-anchor="end" class="sm">Wireframe · thiết kế mục tiêu, chưa triển khai · 1/4</text>
+</svg>

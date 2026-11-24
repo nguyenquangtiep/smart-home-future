@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    image: smart-home-future-api:local
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SMARTHOME_ENVIRONMENT: docker
+    restart: unless-stopped

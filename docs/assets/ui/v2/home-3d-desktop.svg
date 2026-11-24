@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900" lang="vi" role="img" aria-labelledby="t d">
+  <title id="t">Wireframe v2 desktop: trang Nhà 3D-first</title>
+  <desc id="d">Wireframe, chưa phải giao diện đã code. Thanh trên với chọn nhà và tầng, banner an toàn chờ xác nhận mở khóa, thanh điều hướng trái, mô hình 3D chiếm phần chính với hai phòng và các điểm thiết bị, panel thiết bị bên phải hiển thị đèn trần đang chờ xác nhận bật, thanh điều khiển nhanh ở dưới và chú giải trạng thái.</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, "Segoe UI", system-ui, sans-serif; fill: #111827; }
+      .muted { fill: #4B5563; }
+      .note { fill: #2563EB; font-size: 12px; font-weight: 600; }
+      .card { fill: #FFFFFF; stroke: #E5E7EB; }
+      .chip { fill: #F3F4F6; stroke: #E5E7EB; }
+      .h1 { font-size: 18px; font-weight: 700; }
+      .h2 { font-size: 15px; font-weight: 600; }
+      .sm { font-size: 13px; }
+      .xs { font-size: 12px; }
+    </style>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#EEF0F3" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1440" height="900" fill="#F6F7F9"/>
+
+  <!-- Top bar -->
+  <rect x="0" y="0" width="1440" height="64" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <rect x="24" y="18" width="28" height="28" rx="8" fill="#2563EB"/>
+  <text x="64" y="38" class="h1">Smart Home Future</text>
+  <rect x="270" y="16" width="230" height="32" rx="16" class="chip"/>
+  <text x="288" y="37" class="sm">Nhà mẫu ▾</text>
+  <rect x="370" y="22" width="72" height="20" rx="10" fill="#EDE9FE"/>
+  <text x="380" y="36" class="xs" style="fill:#6D28D9">🧪 Giả lập</text>
+  <rect x="512" y="16" width="110" height="32" rx="16" class="chip"/>
+  <text x="530" y="37" class="sm">Tầng 1 ▾</text>
+  <rect x="1150" y="16" width="120" height="32" rx="16" fill="#2563EB"/>
+  <text x="1170" y="37" class="sm" style="fill:#FFFFFF;font-weight:600">✦ Trợ lý</text>
+  <circle cx="1310" cy="32" r="16" class="chip"/>
+  <text x="1302" y="38" class="sm">🔔</text>
+  <circle cx="1323" cy="20" r="8" fill="#B91C1C"/>
+  <text x="1319" y="24" class="xs" style="fill:#FFFFFF;font-size:10px">1</text>
+  <circle cx="1380" cy="32" r="16" fill="#E5E7EB"/>
+  <text x="1371" y="37" class="xs">CN</text>
+
+  <!-- Safety banner -->
+  <rect x="96" y="80" width="1320" height="44" rx="10" fill="#FFFBEB" stroke="#B45309" stroke-dasharray="6 4"/>
+  <text x="116" y="108" class="sm" style="fill:#92400E;font-weight:600">🛡 Chờ chủ nhà xác nhận: Mở khóa cửa chính · yêu cầu bởi Thành viên · còn 1:42</text>
+  <rect x="1300" y="88" width="100" height="28" rx="8" fill="#B45309"/>
+  <text x="1322" y="107" class="sm" style="fill:#FFFFFF;font-weight:600">Xem xét</text>
+
+  <!-- Left rail -->
+  <rect x="0" y="64" width="80" height="836" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <rect x="12" y="140" width="56" height="56" rx="12" fill="#EFF6FF"/>
+  <text x="31" y="166" class="h2">⌂</text>
+  <text x="25" y="186" class="xs" style="fill:#2563EB;font-weight:600">Nhà</text>
+  <text x="31" y="236" class="h2">▦</text>
+  <text x="17" y="256" class="xs muted">Thiết bị</text>
+  <text x="31" y="306" class="h2">⟳</text>
+  <text x="19" y="326" class="xs muted">Tự động</text>
+  <text x="31" y="376" class="h2">☰</text>
+  <text x="20" y="396" class="xs muted">Lịch sử</text>
+  <text x="31" y="446" class="h2">⚙</text>
+  <text x="19" y="466" class="xs muted">Cài đặt</text>
+
+  <!-- 3D canvas -->
+  <rect x="96" y="140" width="924" height="600" rx="16" fill="url(#grid)" stroke="#E5E7EB"/>
+  <rect x="112" y="156" width="210" height="32" rx="16" class="card"/>
+  <text x="128" y="177" class="sm">Tầng 1 · Tầng 2 · Mái</text>
+  <rect x="332" y="156" width="150" height="32" rx="16" class="card"/>
+  <text x="348" y="177" class="sm">☐ Mái  ☑ Tường</text>
+  <rect x="860" y="156" width="144" height="32" rx="16" class="card"/>
+  <rect x="862" y="158" width="72" height="28" rx="14" fill="#111827"/>
+  <text x="882" y="177" class="sm" style="fill:#FFFFFF;font-weight:600">Xem</text>
+  <text x="956" y="177" class="sm muted">Sửa</text>
+  <rect x="972" y="620" width="32" height="104" rx="16" class="card"/>
+  <text x="982" y="648" class="h2">+</text>
+  <text x="983" y="676" class="h2">−</text>
+  <text x="981" y="706" class="sm">⟲</text>
+
+  <!-- Isometric house: living room -->
+  <polygon points="300,470 520,360 720,460 500,570" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="300,470 300,400 520,290 520,360" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="520,360 520,290 720,390 720,460" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="300,470 520,360 720,460 500,570" fill="none" stroke="#2563EB" stroke-width="3"/>
+  <text x="430" y="500" class="h2">Phòng khách</text>
+  <!-- bedroom -->
+  <polygon points="720,460 840,400 960,460 840,520" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="720,460 720,390 840,330 840,400" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="2"/>
+  <polygon points="840,400 840,330 960,390 960,460" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="2"/>
+  <text x="790" y="470" class="sm">Phòng ngủ</text>
+
+  <!-- device markers -->
+  <circle cx="510" cy="430" r="18" fill="#FFFBEB" stroke="#B45309" stroke-width="2.5" stroke-dasharray="5 3"/>
+  <text x="502" y="436" class="sm">💡</text>
+  <circle cx="510" cy="430" r="28" fill="none" stroke="#2563EB" stroke-width="2"/>
+  <circle cx="360" cy="430" r="16" fill="#F0FDF4" stroke="#15803D" stroke-width="2.5"/>
+  <text x="352" y="435" class="xs">▤</text>
+  <circle cx="650" cy="420" r="16" fill="#F0FDF4" stroke="#15803D" stroke-width="2.5"/>
+  <text x="642" y="425" class="xs">❄</text>
+  <circle cx="420" cy="530" r="16" fill="#FEF2F2" stroke="#B91C1C" stroke-width="2.5"/>
+  <line x1="408" y1="518" x2="432" y2="542" stroke="#B91C1C" stroke-width="2"/>
+  <text x="402" y="574" class="xs" text-anchor="end" style="fill:#B91C1C;font-weight:600">Khóa cửa · Mất kết nối</text>
+  <circle cx="860" cy="430" r="16" fill="#F0FDF4" stroke="#15803D" stroke-width="2.5"/>
+  <text x="852" y="435" class="xs">💡</text>
+
+  <text x="112" y="724" class="note">① Mô hình 3D chiếm phần chính · kéo để xoay, cuộn để zoom, bấm phòng để bay tới</text>
+
+  <!-- Right device panel -->
+  <rect x="1036" y="140" width="380" height="600" rx="16" class="card"/>
+  <text x="1060" y="176" class="xs muted">Phòng khách</text>
+  <text x="1060" y="200" class="h1">Đèn trần phòng khách</text>
+  <text x="1384" y="180" class="h2 muted">✕</text>
+  <rect x="1060" y="216" width="220" height="30" rx="15" fill="#FFFBEB" stroke="#B45309" stroke-dasharray="5 3"/>
+  <text x="1074" y="236" class="sm" style="fill:#92400E;font-weight:600">⟳ Đang chờ → Bật</text>
+  <text x="1060" y="272" class="xs muted">Giá trị đã báo: Tắt · 10:02:14 · nguồn: giả lập</text>
+
+  <rect x="1060" y="292" width="332" height="64" rx="12" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="1080" y="330" class="h2">Bật / Tắt</text>
+  <rect x="1316" y="310" width="56" height="28" rx="14" fill="#2563EB"/>
+  <circle cx="1358" cy="324" r="11" fill="#FFFFFF"/>
+
+  <rect x="1060" y="368" width="332" height="84" rx="12" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="1080" y="398" class="h2">Độ sáng</text>
+  <text x="1340" y="398" class="h2">80 %</text>
+  <rect x="1080" y="420" width="292" height="6" rx="3" fill="#E5E7EB"/>
+  <rect x="1080" y="420" width="234" height="6" rx="3" fill="#2563EB"/>
+  <circle cx="1314" cy="423" r="10" fill="#FFFFFF" stroke="#2563EB" stroke-width="2"/>
+
+  <text x="1060" y="492" class="h2">Lịch sử gần đây ▾</text>
+  <text x="1060" y="520" class="sm">10:02 · Bật · <tspan style="fill:#B45309">Đang chờ</tspan></text>
+  <text x="1060" y="546" class="sm">09:40 · Tắt · <tspan style="fill:#15803D">✓ Đã xác nhận</tspan></text>
+  <text x="1060" y="572" class="sm">08:15 · Bật · <tspan style="fill:#4B5563">Chưa xác minh</tspan></text>
+  <text x="1060" y="720" class="note">② Panel chỉ mở khi chọn thiết bị · đóng để 3D rộng hơn</text>
+
+  <!-- Quick dock -->
+  <rect x="96" y="756" width="1320" height="72" rx="16" class="card"/>
+  <text x="116" y="798" class="xs muted">NHANH</text>
+  <rect x="170" y="772" width="140" height="40" rx="20" class="chip"/>
+  <text x="192" y="797" class="sm">🎬 Xem phim</text>
+  <rect x="320" y="772" width="130" height="40" rx="20" class="chip"/>
+  <text x="342" y="797" class="sm">🌙 Đi ngủ</text>
+  <rect x="460" y="772" width="140" height="40" rx="20" class="chip"/>
+  <text x="482" y="797" class="sm">🚪 Ra ngoài</text>
+  <rect x="640" y="772" width="190" height="40" rx="20" class="chip"/>
+  <text x="660" y="797" class="sm">❄ Điều hòa PK · 26 °C</text>
+  <rect x="840" y="772" width="170" height="40" rx="20" class="chip"/>
+  <text x="860" y="797" class="sm">💡 Đèn ngủ · Tắt</text>
+  <text x="1040" y="797" class="note">③ Điều khiển nhanh không cần 3D</text>
+
+  <!-- Legend -->
+  <text x="96" y="866" class="xs muted">Chú giải:</text>
+  <circle cx="170" cy="862" r="8" fill="#F0FDF4" stroke="#15803D" stroke-width="2"/>
+  <text x="184" y="866" class="xs">✓ Đã xác nhận (viền liền)</text>
+  <circle cx="370" cy="862" r="8" fill="#FFFBEB" stroke="#B45309" stroke-width="2" stroke-dasharray="3 2"/>
+  <text x="384" y="866" class="xs">⟳ Đang chờ (viền đứt)</text>
+  <circle cx="560" cy="862" r="8" fill="#FEF2F2" stroke="#B91C1C" stroke-width="2"/>
+  <line x1="554" y1="856" x2="566" y2="868" stroke="#B91C1C" stroke-width="2"/>
+  <text x="574" y="866" class="xs">Mất kết nối (gạch chéo)</text>
+  <rect x="762" y="854" width="16" height="16" rx="8" fill="#EDE9FE"/>
+  <text x="786" y="866" class="xs">🧪 Giả lập (chip)</text>
+  <text x="1140" y="866" class="xs muted">Wireframe v2 · chưa triển khai · 1440 × 900</text>
+</svg>

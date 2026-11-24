@@ -1,0 +1,7 @@
+{"id": "greet-vi", "message": "xin chào", "expected_intent": "greeting", "expected_reply_contains": "Xin chào"}
+{"id": "greet-vi-short", "message": "Chào bạn nhé", "expected_intent": "greeting", "expected_reply_contains": "Smart Home Future"}
+{"id": "greet-en", "message": "Hello there", "expected_intent": "greeting", "expected_reply_contains": "Xin chào"}
+{"id": "thanks-vi", "message": "Cảm ơn nhiều!", "expected_intent": "thanks", "expected_reply_contains": "Rất vui"}
+{"id": "help-vi", "message": "Bạn giúp tôi được không?", "expected_intent": "help", "expected_reply_contains": "trợ giúp"}
+{"id": "no-false-hi", "message": "this is a thing", "expected_intent": "unknown", "expected_reply_contains": "4 từ"}
+{"id": "unknown-vi", "message": "Hôm nay trời đẹp", "expected_intent": "unknown", "expected_reply_contains": "4 từ"}

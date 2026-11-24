@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="title desc" lang="vi">
+  <title id="title">Smart Home Future, màn 4: Sở thích (wireframe mục tiêu)</title>
+  <desc id="desc">Sau lần xem phim, người dùng gõ Lần sau để 27 độ. Trợ lý hỏi áp dụng thế nào với hai lựa chọn: Chỉ lần này, đặt 27 độ ngay và không lưu; hoặc Lưu cho chế độ xem phim. Người dùng chọn lưu. Bảng Sở thích đã lưu bên phải ghi người dùng Bạn, phòng Phòng khách, sinh hoạt Xem phim, điều hòa 27 độ, có nút Sửa và Xóa, trạng thái khi sửa và bản xem trước lần sau Trợ lý đề xuất 27 độ đúng ngữ cảnh.</desc>
+  <defs>
+    <style>
+      text { font-family: "Segoe UI", Roboto, Arial, sans-serif; fill: #1f2937; }
+      .logo { font-size: 19px; font-weight: 700; fill: #1d4ed8; }
+      .nav { font-size: 15px; fill: #374151; }
+      .navon { font-size: 15px; font-weight: 700; fill: #1d4ed8; }
+      .h1 { font-size: 24px; font-weight: 700; }
+      .h2 { font-size: 18px; font-weight: 700; }
+      .name { font-size: 16px; font-weight: 600; }
+      .t { font-size: 15px; }
+      .sub { font-size: 13px; fill: #6b7280; }
+      .sm { font-size: 12px; fill: #6b7280; }
+      .btn { font-size: 14px; font-weight: 600; fill: #1d4ed8; }
+      .btnw { font-size: 14px; font-weight: 600; fill: #ffffff; }
+      .pill { font-size: 12px; font-weight: 700; }
+      .k { font-size: 13px; fill: #6b7280; }
+    </style>
+  </defs>
+
+  <!-- Khung trang -->
+  <rect width="1280" height="800" fill="#f3f4f6"/>
+  <rect width="1280" height="56" fill="#ffffff"/>
+  <line x1="0" y1="56" x2="1280" y2="56" stroke="#e5e7eb"/>
+  <rect x="24" y="16" width="24" height="24" rx="6" fill="#1d4ed8"/>
+  <path d="M29 30 L36 23 L43 30 V36 H29 Z" fill="#ffffff"/>
+  <text x="58" y="34" class="logo">Smart Home Future</text>
+  <text x="260" y="34" class="nav">Cả nhà</text>
+  <text x="340" y="34" class="navon">Sở thích</text>
+  <line x1="340" y1="44" x2="402" y2="44" stroke="#1d4ed8" stroke-width="3"/>
+  <rect x="1040" y="12" width="120" height="32" rx="16" fill="#1d4ed8"/>
+  <text x="1100" y="33" text-anchor="middle" class="btnw">Trợ lý</text>
+  <circle cx="1210" cy="28" r="16" fill="#e0e7ff"/>
+  <text x="1210" y="32" text-anchor="middle" class="pill" style="fill:#3730a3">Bạn</text>
+
+  <text x="40" y="86" class="btn">← Phòng khách</text>
+  <text x="40" y="120" class="h1">Sở thích</text>
+  <rect x="160" y="102" width="132" height="24" rx="12" fill="#fef9c3" stroke="#ca8a04"/>
+  <text x="226" y="119" text-anchor="middle" class="pill" style="fill:#854d0e">Thiết kế mục tiêu</text>
+
+  <!-- Trợ lý -->
+  <rect x="40" y="144" width="600" height="616" rx="12" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="64" y="180" class="h2">Trợ lý</text>
+  <rect x="132" y="162" width="176" height="26" rx="13" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="220" y="180" text-anchor="middle" class="pill" style="fill:#1d4ed8">Ngữ cảnh: Phòng khách</text>
+
+  <rect x="64" y="202" width="552" height="40" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="80" y="227" class="sub">Xem phim · 3/3 bước đã xác minh · điều hòa 26°C</text>
+
+  <rect x="446" y="258" width="170" height="38" rx="14" fill="#1d4ed8"/>
+  <text x="531" y="282" text-anchor="middle" class="t" style="fill:#ffffff">Lần sau để 27 độ</text>
+
+  <rect x="64" y="310" width="552" height="62" rx="14" fill="#f3f4f6"/>
+  <text x="80" y="336" class="t">Bạn muốn áp dụng 27°C thế nào?</text>
+  <text x="80" y="358" class="sub">Mình chỉ lưu lâu dài khi bạn chọn lưu.</text>
+
+  <!-- Lựa chọn A -->
+  <rect x="64" y="388" width="268" height="112" rx="12" fill="#ffffff" stroke="#d1d5db"/>
+  <circle cx="88" cy="416" r="9" fill="#ffffff" stroke="#9ca3af" stroke-width="2"/>
+  <text x="106" y="421" class="name">Chỉ lần này</text>
+  <text x="84" y="452" class="sub">Đặt 27°C ngay bây giờ.</text>
+  <text x="84" y="474" class="sub">Không lưu. Lần sau vẫn đề xuất 26°C.</text>
+
+  <!-- Lựa chọn B: được chọn -->
+  <rect x="348" y="388" width="268" height="112" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <circle cx="372" cy="416" r="9" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+  <circle cx="372" cy="416" r="5" fill="#2563eb"/>
+  <text x="390" y="421" class="name">Lưu cho chế độ xem phim</text>
+  <text x="368" y="452" class="sub">Phòng khách · Xem phim · Bạn</text>
+  <text x="368" y="474" class="sub">Từ lần sau Trợ lý đề xuất 27°C.</text>
+
+  <text x="340" y="528" text-anchor="middle" class="sm">Bạn chọn: Lưu cho chế độ xem phim</text>
+
+  <rect x="64" y="542" width="552" height="62" rx="14" fill="#f3f4f6"/>
+  <text x="80" y="568" class="t"><tspan style="fill:#166534" font-weight="700">✓ Đã lưu sở thích.</tspan> Lần này điều hòa vẫn 26°C.</text>
+  <text x="80" y="590" class="sub">Muốn đổi luôn bây giờ thì bấm nút bên dưới.</text>
+  <rect x="64" y="616" width="150" height="34" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="139" y="638" text-anchor="middle" class="btn">Đổi luôn 27°C</text>
+
+  <rect x="64" y="696" width="552" height="44" rx="22" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="84" y="723" class="sub">Gõ yêu cầu…</text>
+
+  <!-- Sở thích đã lưu -->
+  <rect x="664" y="144" width="576" height="616" rx="12" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="688" y="180" class="h2">Sở thích đã lưu</text>
+  <text x="688" y="202" class="sub">Trợ lý chỉ dùng khi đúng người, đúng phòng, đúng sinh hoạt.</text>
+
+  <rect x="688" y="218" width="528" height="236" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+  <text x="708" y="250" class="name">Xem phim · Phòng khách</text>
+  <rect x="1148" y="234" width="48" height="22" rx="11" fill="#1d4ed8"/>
+  <text x="1172" y="250" text-anchor="middle" class="pill" style="fill:#ffffff">Mới</text>
+  <text x="708" y="286" class="k">Người dùng</text>
+  <text x="820" y="286" class="t">Bạn</text>
+  <text x="708" y="314" class="k">Phòng</text>
+  <text x="820" y="314" class="t">Phòng khách</text>
+  <text x="708" y="342" class="k">Sinh hoạt</text>
+  <text x="820" y="342" class="t">Xem phim</text>
+  <text x="708" y="370" class="k">Điều hòa</text>
+  <text x="820" y="370" class="t"><tspan font-weight="700">27°C</tspan> (thay cho 26°C mặc định)</text>
+  <text x="708" y="398" class="k">Nguồn</text>
+  <text x="820" y="398" class="t">Bạn chọn lưu trong chat</text>
+  <rect x="708" y="412" width="80" height="30" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="748" y="432" text-anchor="middle" class="btn">Sửa</text>
+  <rect x="798" y="412" width="80" height="30" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="838" y="432" text-anchor="middle" class="btn" style="fill:#b91c1c">Xóa</text>
+  <text x="892" y="432" class="sm">Xóa sẽ hỏi lại, sau đó Trợ lý quay về 26°C.</text>
+
+  <!-- Khi bấm Sửa -->
+  <rect x="688" y="470" width="528" height="96" rx="12" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="708" y="496" class="k">Khi bấm Sửa</text>
+  <text x="708" y="540" class="t">Điều hòa</text>
+  <rect x="800" y="518" width="34" height="32" rx="8" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="817" y="539" text-anchor="middle" class="name">−</text>
+  <text x="864" y="540" text-anchor="middle" class="name">27°C</text>
+  <rect x="894" y="518" width="34" height="32" rx="8" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="911" y="539" text-anchor="middle" class="name">+</text>
+  <rect x="1048" y="518" width="72" height="32" rx="8" fill="#1d4ed8"/>
+  <text x="1084" y="539" text-anchor="middle" class="btnw">Lưu</text>
+  <rect x="1128" y="518" width="68" height="32" rx="8" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="1162" y="539" text-anchor="middle" class="btn" style="fill:#374151">Hủy</text>
+
+  <!-- Lần sau -->
+  <rect x="688" y="582" width="528" height="158" rx="12" fill="#f9fafb" stroke="#93c5fd" stroke-dasharray="6 4"/>
+  <text x="708" y="608" class="name">Lần sau, ở Phòng khách</text>
+  <text x="708" y="634" class="sub">Bạn: “Chuẩn bị xem phim”</text>
+  <text x="708" y="662" class="t">1 Đèn 20%  ·  2 Đóng rèm  ·  3 Điều hòa <tspan font-weight="700" style="fill:#1d4ed8">27°C</tspan></text>
+  <rect x="1080" y="648" width="116" height="22" rx="11" fill="#dbeafe"/>
+  <text x="1138" y="664" text-anchor="middle" class="pill" style="fill:#1d4ed8">Theo sở thích</text>
+  <text x="708" y="690" class="sm">Trợ lý vẫn hiện kế hoạch, bạn bấm Chạy như mọi lần.</text>
+  <text x="708" y="712" class="sm">Ở phòng khác (ví dụ Phòng ngủ): không áp dụng 27°C.</text>
+
+  <text x="1256" y="788" text-anchor="end" class="sm">Wireframe · thiết kế mục tiêu, chưa triển khai · 4/4</text>
+</svg>
