@@ -53,6 +53,7 @@ from smarthome.control.commands import (
     Verification,
     request_fingerprint,
 )
+from smarthome.control.membership import MembershipSource, StaticMembershipSource
 from smarthome.control.policy import Actor, CommandRequest, Outcome, Reason
 from smarthome.core.logging import get_logger
 from smarthome.domain.capabilities import Capability, CapabilityKind, CommandValue
@@ -128,9 +129,11 @@ class ControlService:
         idempotency_ttl_s: float = 86_400.0,
         clock_skew_s: float = 1.0,
         clock: Clock = utc_now,
+        membership: MembershipSource | None = None,
     ) -> None:
         self.homes = {h.id: h for h in homes}
-        self.members = {(m.home_id, m.user_id): m for m in members}
+        # ``members`` seeds the static source; pass ``membership`` to use a live one instead.
+        self.membership: MembershipSource = membership or StaticMembershipSource(members)
         self.devices = {d.id: d for d in devices}
         self.gateways = dict(gateways)
         self.state = state or StateStore()
@@ -153,8 +156,9 @@ class ControlService:
 
     # ---- queries -------------------------------------------------------------------------
 
-    def member(self, home_id: str, user_id: str) -> Member | None:
-        return self.members.get((home_id, user_id))
+    async def member(self, home_id: str, user_id: str) -> Member | None:
+        """The user's current membership (looked up every call, never cached)."""
+        return await self.membership.get(home_id, user_id)
 
     def home(self, home_id: str) -> Home:
         try:
@@ -254,7 +258,12 @@ class ControlService:
         device = self.device_in_home(record.home_id, record.device_id)
         if record.status is not CommandStatus.AWAITING_CONFIRMATION:
             raise ConfirmationError("NOT_AWAITING", f"Lệnh đang ở trạng thái {record.status}.")
-        if not policy.may_confirm(approver, device):
+        # Re-resolve the approver: a demoted or removed owner must not approve with the role
+        # the request was authenticated with a moment ago.
+        live = await self.member(approver.home_id, approver.user_id)
+        if live is not None:
+            approver = approver.model_copy(update={"role": live.role})
+        if live is None or not policy.may_confirm(approver, device):
             await self._audit(record, "confirmation.forbidden", actor_id=approver.user_id)
             raise ConfirmationError("FORBIDDEN_ROLE", "Chỉ chủ nhà mới xác nhận được thao tác này.")
 
@@ -282,7 +291,7 @@ class ControlService:
         await self._audit(record, "confirmation.approved", actor_id=approver.user_id)
         # Approval is not authorization: re-run the policy with the requester's own role
         # and the current device state.
-        requester = self.member(record.home_id, record.actor_id)
+        requester = await self.member(record.home_id, record.actor_id)
         if requester is None:
             await self._finish(
                 record,

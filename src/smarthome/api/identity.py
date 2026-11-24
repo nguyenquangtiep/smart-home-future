@@ -17,7 +17,7 @@ def get_control(request: Request) -> ControlService:
     return request.app.state.control
 
 
-def current_actor(
+async def current_actor(
     home_id: str,
     request: Request,
     control: Annotated[ControlService, Depends(get_control)],
@@ -33,7 +33,7 @@ def current_actor(
             status.HTTP_401_UNAUTHORIZED,
             detail={"code": "UNAUTHENTICATED", "message": "Thiếu danh tính người dùng."},
         )
-    member = control.member(home_id, x_dev_user)
+    member = await control.member(home_id, x_dev_user)
     if member is None:
         # 404, not 403: do not reveal whether a home exists to non-members.
         raise HTTPException(
