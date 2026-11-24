@@ -67,3 +67,20 @@ jobs:
           name: mermaid-svg
           path: mermaid-out/*.svg
           if-no-files-found: ignore
+
+  docker:
+    # F1/F3: build the image and run it against a throwaway PostgreSQL (migrations, seed,
+    # real login, CSRF, restart persistence, healthcheck) plus the development Compose file.
+    # Only 127.0.0.1 ports are published. This is not the production topology (P0-17).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile (hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+
+      - name: Docker build and runtime smoke test
+        run: bash scripts/docker_smoke.sh smart-home-future:sprint1
