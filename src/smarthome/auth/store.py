@@ -4,6 +4,7 @@ Every public method is one transaction. Membership changes also write the home's
 ``audit_events`` row in the same transaction, so a change and its audit record cannot diverge.
 """
 
+import hashlib
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -19,6 +20,23 @@ from smarthome.persistence.pgconn import Conn, PgConnection
 # last_seen_at is written at most this often (LLD D-07-15).
 LAST_SEEN_GRANULARITY = timedelta(minutes=5)
 LOGIN_ATTEMPT_RETENTION = timedelta(hours=24)
+# Namespaces (first key) of the two-integer advisory locks taken by reserve_attempt. The
+# two-key lock space does not overlap the single-bigint key of the instance lock.
+_LOCK_EMAIL = 0x4C4F_4745  # "LOGE"
+_LOCK_IP = 0x4C4F_4749  # "LOGI"
+
+
+def _lock_key(value: bytes) -> int:
+    """A signed 32-bit key derived from ``value`` (collisions only make two keys share a lock)."""
+    return int.from_bytes(hashlib.sha256(value).digest()[:4], "big", signed=True)
+
+
+@dataclass(frozen=True)
+class AttemptSlot:
+    """Result of reserve_attempt: a reserved attempt id, or how long to wait."""
+
+    attempt_id: int | None
+    retry_after: timedelta | None
 
 
 class AuthStoreError(Exception):
@@ -351,49 +369,99 @@ class PostgresAuthStore:
 
     # ---- login throttling and events -----------------------------------------------------
 
-    async def failure_window(
-        self, email_hash: bytes, ip: str | None, since: datetime
-    ) -> tuple[int, datetime | None, int, datetime | None]:
-        """(failures for the email, oldest of them, failures for the IP, oldest of them)."""
+    async def reserve_attempt(
+        self,
+        email_hash: bytes,
+        ip: str | None,
+        now: datetime,
+        window: timedelta,
+        max_email: int,
+        max_ip: int,
+    ) -> AttemptSlot:
+        """Atomically check the limits and, if allowed, take a slot (F2).
 
-        def tx(conn: Conn) -> tuple[int, datetime | None, int, datetime | None]:
+        One short transaction: lock the email (and IP) with transaction-scoped advisory locks,
+        count failures in the window, and either refuse with the wait or insert the attempt as a
+        failure *before* the password is checked. Concurrent requests on other connections wait
+        for the lock and then see that row, so at most ``max_email`` checks run per window. The
+        locks are released at commit, so no lock is held while Argon2id runs. Locks are always
+        taken email first, then IP, so two requests can never wait on each other in a cycle.
+        """
+
+        def tx(conn: Conn) -> AttemptSlot:
+            conn.execute(
+                "SELECT pg_advisory_xact_lock(%s, %s)", (_LOCK_EMAIL, _lock_key(email_hash))
+            )
+            if ip is not None:
+                conn.execute(
+                    "SELECT pg_advisory_xact_lock(%s, %s)", (_LOCK_IP, _lock_key(ip.encode()))
+                )
+            since = now - window
+            waits: list[timedelta] = []
             e = conn.execute(
                 "SELECT count(*) AS n, min(at) AS oldest FROM login_attempts"
                 " WHERE email_hash = %s AND NOT succeeded AND at > %s",
                 (email_hash, since),
             ).fetchone()
-            if ip is None:
-                return e["n"], e["oldest"], 0, None
-            i = conn.execute(
-                "SELECT count(*) AS n, min(at) AS oldest FROM login_attempts"
-                " WHERE ip = %s AND NOT succeeded AND at > %s",
-                (ip, since),
+            if e["n"] >= max_email and e["oldest"] is not None:
+                waits.append(e["oldest"] + window - now)
+            if ip is not None:
+                i = conn.execute(
+                    "SELECT count(*) AS n, min(at) AS oldest FROM login_attempts"
+                    " WHERE ip = %s AND NOT succeeded AND at > %s",
+                    (ip, since),
+                ).fetchone()
+                if i["n"] >= max_ip and i["oldest"] is not None:
+                    waits.append(i["oldest"] + window - now)
+            if waits:
+                return AttemptSlot(attempt_id=None, retry_after=max(waits))
+            row = conn.execute(
+                "INSERT INTO login_attempts (at, email_hash, ip, succeeded)"
+                " VALUES (%s, %s, %s, false) RETURNING id",
+                (now, email_hash, ip),
             ).fetchone()
-            return e["n"], e["oldest"], i["n"], i["oldest"]
+            conn.execute(
+                "DELETE FROM login_attempts WHERE at < %s", (now - LOGIN_ATTEMPT_RETENTION,)
+            )
+            return AttemptSlot(attempt_id=row["id"], retry_after=None)
 
         return await self._pg.run(tx)
 
-    async def record_attempt(
+    async def release_attempt(
         self,
+        attempt_id: int,
+        now: datetime,
+        user_id: str | None,
         email_hash: bytes,
         ip: str | None,
+    ) -> None:
+        """Undo a reservation whose password was never checked (hasher busy, R3)."""
+
+        def tx(conn: Conn) -> None:
+            conn.execute("DELETE FROM login_attempts WHERE id = %s", (attempt_id,))
+            _event(conn, now, "login_busy", user_id, None, email_hash=email_hash.hex(), ip=ip)
+
+        await self._pg.run(tx)
+
+    async def finish_attempt(
+        self,
+        attempt_id: int,
         succeeded: bool,
         now: datetime,
         user_id: str | None,
         action: str,
+        email_hash: bytes,
+        ip: str | None,
         reason: str | None = None,
     ) -> None:
-        """Record the attempt and its security event together (and prune old attempts)."""
+        """Record the outcome of a reserved attempt and its security event together. A success
+        stops counting as a failure; a failure (or a crash before this call) keeps counting."""
 
         def tx(conn: Conn) -> None:
-            conn.execute(
-                "INSERT INTO login_attempts (at, email_hash, ip, succeeded)"
-                " VALUES (%s, %s, %s, %s)",
-                (now, email_hash, ip, succeeded),
-            )
-            conn.execute(
-                "DELETE FROM login_attempts WHERE at < %s", (now - LOGIN_ATTEMPT_RETENTION,)
-            )
+            if succeeded:
+                conn.execute(
+                    "UPDATE login_attempts SET succeeded = true WHERE id = %s", (attempt_id,)
+                )
             _event(
                 conn, now, action, user_id, None,
                 email_hash=email_hash.hex(), ip=ip, **({"reason": reason} if reason else {}),

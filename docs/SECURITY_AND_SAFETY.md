@@ -11,7 +11,7 @@ Cập nhật 2026-11-23. Mỗi mục ghi **Đã có** (có test) hoặc mã task
 | Mục | Thiết kế | Trạng thái |
 |---|---|---|
 | Danh tính tạm | `X-Dev-User`, chỉ khi `SMARTHOME_DEV_IDENTITY_ENABLED=true` **và** `environment ∈ {local, test}`; ngoài đó app từ chối khởi động ([LLD P0-07 D-07-9](lld/P0-07_AUTH_RBAC.md#3-quyết-định-thiết-kế)) | ✅ `core/config.py`, `test_environment_gate.py`, `test_a_header_identity_is_never_trusted_without_the_dev_flag` |
-| Đăng nhập thật | Mật khẩu Argon2id (trong thread pool), cookie phiên `HttpOnly; Secure; SameSite=Strict`, CSRF token + `Origin` cho request ghi, giới hạn thử sai 5/email và 30/IP trong 15 phút, hết hạn nhàn rỗi 7 / tuyệt đối 30 ngày. Mô hình mối đe dọa: [ADR 0005 §4](adr/0005-session-auth-csrf.md#4-mô-hình-mối-đe-dọa) | ✅ `auth/`, `api/security.py`, `test_auth_service.py`, `test_auth_api.py`. Giới hạn: M-07-1 chưa đo trên máy đích |
+| Đăng nhập thật | Mật khẩu Argon2id (trong thread pool), cookie phiên `HttpOnly; Secure; SameSite=Strict`, CSRF token + `Origin` cho request ghi, giới hạn thử sai 5/email và 30/IP trong 15 phút, hết hạn nhàn rỗi 7 / tuyệt đối 30 ngày. Mô hình mối đe dọa: [ADR 0005 §4](adr/0005-session-auth-csrf.md#4-mô-hình-mối-đe-dọa) | ✅ `auth/`, `api/security.py`, `test_auth_service.py`, `test_auth_api.py`, `test_login_rate_limit_concurrency.py` (giới hạn đúng khi 20–40 request đồng thời trên nhiều kết nối). Giới hạn: M-07-1 chờ máy đích |
 | RBAC theo nhà | Membership `(user, home, role)`; vai trò owner/member/guest; `min_role` theo capability. Membership tra DB mỗi request và mỗi lần duyệt lệnh (`MembershipSource`); owner cuối không bị gỡ/hạ | ✅ `test_role_matrix_and_isolation_for_every_home_route`, `test_demoted_owner_cannot_approve_a_pending_command`, `test_two_owners_demoting_each_other_at_once_leave_one_owner` |
 | Tách dữ liệu giữa nhà | Mọi truy vấn lọc theo `home_id` của danh tính; người ngoài nhận 404 cho cả nhà và thiết bị; khóa ngoại tổng hợp theo `home_id` ở DB | ✅ test tham số hóa trên **mọi** route theo nhà (AC-07-10) và `test_composite_foreign_keys_block_cross_home_rows` |
 | WebSocket | Cùng cookie phiên khi bắt tay (không token trong URL), kiểm `Origin`, kiểm membership, một chiều server → client, đóng kết nối ≤ 60 giây sau khi phiên/membership bị thu hồi ([ADR 0005 §5](adr/0005-session-auth-csrf.md#5-websocket-ràng-buộc-cho-adr-0007)) | 📐 DESIGNED (P0-08, chưa có LLD) |
@@ -101,7 +101,7 @@ mọi kế hoạch qua validate + policy, nên văn bản bị chèn không tạ
 |---|---|---|---|---|
 | ⛔ **Critical** | Không còn mục Critical mở sau Sprint 1; **không** nối thiết bị thật hay triển khai ra ngoài máy dev trước P0-17 | | | |
 | 🔴 **High** | Argon2id chưa đo trên máy đích (M-07-1); chưa có TLS (cần reverse proxy, P0-17) | Cấu hình ghi lúc chạy chưa có (chỉ khi app dừng, P0-13) | Chưa có adapter Home Assistant, chưa kiểm thiết bị thật (P0-09) | |
-| 🟠 **Medium** | Chưa có rate limit; chưa tách role DB cho audit | Audit có thể thiếu khi DB gián đoạn (chỉ log) | `state_match` phụ thuộc đồng hồ gateway; HA `assumed_state` | |
+| 🟠 **Medium** | Rate limit chỉ có cho đăng nhập (chưa cho API khác); chưa tách role DB cho audit | Audit có thể thiếu khi DB gián đoạn (chỉ log) | `state_match` phụ thuộc đồng hồ gateway; HA `assumed_state` | |
 | 🟡 **Low** | | | | Lệnh chờ xác nhận hết hạn nằm trong bộ nhớ tới khi được truy cập |
 
 *Hình 2. Ma trận rủi ro theo mức độ và khu vực (đánh giá định tính, không phải số đo). Chi tiết từng rủi ro ở bảng dưới.*
@@ -112,5 +112,6 @@ mọi kế hoạch qua validate + policy, nên văn bản bị chèn không tạ
 | Không đặt `SMARTHOME_DATABASE_URL` thì lệnh và audit ở bộ nhớ | Trung bình | Production từ chối khởi động khi thiếu DB |
 | Ghi audit thất bại (DB lỗi) chỉ được log, không chặn điều khiển: có thể thiếu dòng audit trong lúc DB gián đoạn | Trung bình | Cảnh báo/giám sát ở P0-16 |
 | Xác minh `state_match` (không correlation) dựa vào đồng hồ gateway trong ngưỡng 1 s | Trung bình | Ưu tiên correlation (HA `context.id`) ở P0-09 |
-| Chưa có rate limit API | Trung bình | P0-07 |
+| Rate limit chỉ cho đăng nhập (5/email, 30/IP, nguyên tử dưới tải đồng thời: F2) | Trung bình | API khác: P0-16 |
+| Nhiều đăng nhập khác email/IP cùng lúc làm cạn RAM/CPU (Argon2id ~64 MiB mỗi phép) | Trung bình → Thấp | **Đã giới hạn** (R3): tối đa 2 phép cùng lúc, hàng đợi 16, chờ 5 s, vượt thì `503 AUTH_BUSY`; cấu hình qua `SMARTHOME_ARGON2_*`. Dưới tấn công cực lớn người dùng thật có thể phải thử lại. Capacity theo worker thread nên hủy request không nhả chỗ sớm (R4); request đăng nhập bị hủy vẫn tính là một lần sai và được ghi `login_cancelled` |
 | HA `assumed_state` có thể làm xác minh sai | Trung bình | Thiết kế ở IOT_INTEGRATION §6, kiểm ở P0-09 |

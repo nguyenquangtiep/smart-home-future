@@ -2,6 +2,41 @@
 
 Mỗi đợt ghi: thay đổi, lý do, kiểm chứng, phần chưa xong. Mới nhất ở trên.
 
+## 2026-11-24 · Đợt 11: R4, an toàn khi hủy task (Argon2id và đăng nhập)
+
+| Mục | Kết quả |
+|---|---|
+| Nguyên nhân | `_run()` giảm `_pending` trong `finally` của coroutine; hủy coroutine không dừng worker thread nên capacity bị nhả sớm và hàng đợi có thể vượt `max_pending` |
+| Tái hiện | `test_hasher_cancellation.py`: T1 (hủy khi đang chờ slot) và T2 (hủy khi đang băm) **lỗi trên code cũ**: `_pending` 1 thay vì 2, 0 thay vì 1 |
+| Sửa | Thread pool riêng cỡ `max_pending`; `_pending` chỉ giảm trong done-callback của `concurrent.futures.Future` (đúng một lần); cờ `abandoned` để worker đã bị bỏ không băm; `stats()` để quan sát. Đăng nhập và đổi mật khẩu: hủy sau khi giữ chỗ vẫn tính là thất bại, ghi `login_cancelled` (che bằng `shield`), không tạo phiên; hủy khi đang giữ chỗ ghi sự kiện bước `reserving` |
+| Test | 5 test đơn vị (T1–T4, T6; lặp 15 lần đều đạt) và 7 test PostgreSQL thật (T5, T6; lặp 5 lần đều đạt) |
+| Kiểm chứng | pytest Postgres bắt buộc: **456 passed, 0 failed, 0 skipped** (không Postgres: 322 passed, 134 skipped); ruff đạt; eval 7/7; Mermaid render |
+| Giới hạn | Không khẳng định ngắt kết nối HTTP sẽ hủy handler; test hủy `asyncio.Task` trực tiếp |
+
+## 2026-11-24 · Đợt 10: vòng review PR #2 (R1, R2, R3)
+
+| Mục | Kết quả |
+|---|---|
+| R1 | `DEPLOYMENT.md` viết lại phần hiện trạng và cấu hình (hết mô tả Compose `docker`, cổng fail-open, "sẽ làm"); tách hiện tại và mục tiêu P0-17; ADR 0005 §1, ADR 0008 đánh dấu phần lịch sử |
+| R2 | Smoke test dùng `docker rm -fv`, thư mục tạm cho headers/cookie/CSRF, `cleanup` ở mọi lối thoát; script cũ được đo là bỏ lại 1 volume mỗi lần chạy. `docker_smoke_cleanup_check.sh` ép lỗi ở `db`, `app`, `restart` và xác nhận không sót gì (máy dev); CI kiểm cả hai đường |
+| R3 | Trước: 24 đăng nhập khác email/IP → 16 phép Argon2id cùng lúc (~1 GiB), hàng đợi vô hạn. Sau: tối đa 2 cùng lúc (đo lại: đỉnh 2, ~128 MiB), hàng đợi 16, chờ 5 s, `503 AUTH_BUSY`; lần thử bận được trả lại và ghi `login_busy`. Test F2 nới giới hạn hasher để vẫn đo riêng rate limiter |
+| Docker máy dev | Docker Desktop chạy lại được: `docker compose config`, `docker build`, smoke test 30/30 đạt |
+| Kiểm chứng | pytest Postgres bắt buộc: **444 passed, 0 failed, 0 skipped** (không Postgres: 317 passed, 127 skipped); ruff đạt; eval 7/7; Mermaid render |
+
+## 2026-11-24 · Đợt 9: nghiệm thu bổ sung Sprint 1 (F1, F2, F3)
+
+Chi tiết: [SPRINT1_ACCEPTANCE §Nghiệm thu bổ sung](SPRINT1_ACCEPTANCE.md#nghiệm-thu-bổ-sung-2026-11-24-f1-f2-f3). Nhánh
+`fix/sprint1-acceptance-hardening` từ `main` = `b252133`.
+
+| Mục | Kết quả |
+|---|---|
+| F1 | `Dockerfile` có `\n` theo nghĩa đen trong `ENV` nhiều dòng (build hỏng). Sửa; test tĩnh `test_dockerfile.py` (3 lỗi trên file cũ, đạt trên file mới); hadolint trong CI |
+| F2 | Tái hiện được race: 20 lần đăng nhập sai đồng thời đều được kiểm mật khẩu (giới hạn 5), 40 lần từ một IP đều được kiểm (giới hạn 30). Sửa bằng `reserve_attempt` (một transaction, advisory lock email rồi IP, giữ chỗ trước khi xác minh) và `finish_attempt`. 5 test đồng thời trên PostgreSQL thật: 4 lỗi trước, đạt sau |
+| F3 | Docker Desktop trên máy dev crash khi khởi động (không sửa cài đặt của chủ máy). Thêm job `docker` trong CI: [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175), 30 kiểm tra đạt (build, production fail-closed, migration, đăng nhập, CSRF, restart, healthcheck, Compose dev chỉ `127.0.0.1`) |
+| Argon2id | `scripts/bench_argon2.py`: máy dev xác minh p50 84,5 ms, p95 118,2 ms, event loop trễ tối đa 6,6 ms. M-07-1: PENDING TARGET HARDWARE |
+| Kiểm chứng | pytest Postgres bắt buộc: **438 passed, 0 failed, 0 skipped** (không Postgres: 316 passed, 122 skipped); ruff đạt; eval 7/7; Mermaid render; CI `checks` và `docker` đều đạt |
+| Còn mở | Argon2id trên máy đích; topology production (P0-17); Docker trên máy dev |
+
 ## 2026-11-24 · Đợt 8: Sprint 1 (P0-06b, P0-07)
 
 Nghiệm thu từng tiêu chí: [SPRINT1_ACCEPTANCE.md](SPRINT1_ACCEPTANCE.md). Thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md),

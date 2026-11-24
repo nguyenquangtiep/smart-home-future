@@ -27,7 +27,8 @@ tính **mỗi request** từ bảng `memberships`: gỡ hoặc hạ quyền có 
 | POST | `/api/v1/auth/logout` | `204`, thu hồi phiên; không có phiên cũng `204` |
 | POST | `/api/v1/auth/password` | `{current_password, new_password}` → `204`, thu hồi mọi phiên khác; `401`, `422 WEAK_PASSWORD`, `429` |
 
-Mật khẩu 12–128 ký tự, không nằm trong danh sách phổ biến, không trùng email. Tối đa 5 lần sai mỗi email và 30 mỗi IP trong 15
+Hệ thống quá tải băm mật khẩu (nhiều đăng nhập cùng lúc) → `503 AUTH_BUSY` + `Retry-After: 1` ở login, đổi mật khẩu và
+thêm thành viên; lần thử đó không bị tính vào giới hạn. Mật khẩu 12–128 ký tự, không nằm trong danh sách phổ biến, không trùng email. Tối đa 5 lần sai mỗi email và 30 mỗi IP trong 15
 phút (cửa sổ trượt, tính cả email không tồn tại).
 
 ## Thành viên (chỉ chủ nhà)

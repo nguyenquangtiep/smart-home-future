@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 Environment = Literal["local", "test", "staging", "production"]
@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     login_max_failures_email: int = 5
     login_max_failures_ip: int = 30
     login_window_s: float = 900.0
+    # Argon2id capacity (R3): each hash needs ~64 MiB. Beyond these, logins get 503 AUTH_BUSY.
+    argon2_max_concurrent: int = Field(default=2, ge=1)
+    argon2_max_pending: int = Field(default=16, ge=1)
+    argon2_wait_s: float = Field(default=5.0, gt=0)
 
     @field_validator("allowed_origins", "trusted_proxy_ips", mode="before")
     @classmethod
@@ -101,6 +105,10 @@ class Settings(BaseSettings):
                 raise ConfigError(
                     f"SMARTHOME_ALLOWED_ORIGINS is required in the {self.environment!r} environment"
                 )
+        if self.argon2_max_pending < self.argon2_max_concurrent:
+            raise ConfigError(
+                "SMARTHOME_ARGON2_MAX_PENDING must be >= SMARTHOME_ARGON2_MAX_CONCURRENT"
+            )
         return self
 
 
