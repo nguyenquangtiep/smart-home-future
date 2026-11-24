@@ -113,5 +113,5 @@ mọi kế hoạch qua validate + policy, nên văn bản bị chèn không tạ
 | Ghi audit thất bại (DB lỗi) chỉ được log, không chặn điều khiển: có thể thiếu dòng audit trong lúc DB gián đoạn | Trung bình | Cảnh báo/giám sát ở P0-16 |
 | Xác minh `state_match` (không correlation) dựa vào đồng hồ gateway trong ngưỡng 1 s | Trung bình | Ưu tiên correlation (HA `context.id`) ở P0-09 |
 | Rate limit chỉ cho đăng nhập (5/email, 30/IP, nguyên tử dưới tải đồng thời: F2) | Trung bình | API khác: P0-16 |
-| Nhiều đăng nhập khác email/IP cùng lúc làm cạn RAM/CPU (Argon2id ~64 MiB mỗi phép) | Trung bình → Thấp | **Đã giới hạn** (R3): tối đa 2 phép cùng lúc, hàng đợi 16, chờ 5 s, vượt thì `503 AUTH_BUSY`; cấu hình qua `SMARTHOME_ARGON2_*`. Dưới tấn công cực lớn người dùng thật có thể phải thử lại |
+| Nhiều đăng nhập khác email/IP cùng lúc làm cạn RAM/CPU (Argon2id ~64 MiB mỗi phép) | Trung bình → Thấp | **Đã giới hạn** (R3): tối đa 2 phép cùng lúc, hàng đợi 16, chờ 5 s, vượt thì `503 AUTH_BUSY`; cấu hình qua `SMARTHOME_ARGON2_*`. Dưới tấn công cực lớn người dùng thật có thể phải thử lại. Capacity theo worker thread nên hủy request không nhả chỗ sớm (R4); request đăng nhập bị hủy vẫn tính là một lần sai và được ghi `login_cancelled` |
 | HA `assumed_state` có thể làm xác minh sai | Trung bình | Thiết kế ở IOT_INTEGRATION §6, kiểm ở P0-09 |

@@ -2,6 +2,17 @@
 
 Mỗi đợt ghi: thay đổi, lý do, kiểm chứng, phần chưa xong. Mới nhất ở trên.
 
+## 2026-11-24 · Đợt 11: R4, an toàn khi hủy task (Argon2id và đăng nhập)
+
+| Mục | Kết quả |
+|---|---|
+| Nguyên nhân | `_run()` giảm `_pending` trong `finally` của coroutine; hủy coroutine không dừng worker thread nên capacity bị nhả sớm và hàng đợi có thể vượt `max_pending` |
+| Tái hiện | `test_hasher_cancellation.py`: T1 (hủy khi đang chờ slot) và T2 (hủy khi đang băm) **lỗi trên code cũ**: `_pending` 1 thay vì 2, 0 thay vì 1 |
+| Sửa | Thread pool riêng cỡ `max_pending`; `_pending` chỉ giảm trong done-callback của `concurrent.futures.Future` (đúng một lần); cờ `abandoned` để worker đã bị bỏ không băm; `stats()` để quan sát. Đăng nhập và đổi mật khẩu: hủy sau khi giữ chỗ vẫn tính là thất bại, ghi `login_cancelled` (che bằng `shield`), không tạo phiên; hủy khi đang giữ chỗ ghi sự kiện bước `reserving` |
+| Test | 5 test đơn vị (T1–T4, T6; lặp 15 lần đều đạt) và 7 test PostgreSQL thật (T5, T6; lặp 5 lần đều đạt) |
+| Kiểm chứng | pytest Postgres bắt buộc: **456 passed, 0 failed, 0 skipped** (không Postgres: 322 passed, 134 skipped); ruff đạt; eval 7/7; Mermaid render |
+| Giới hạn | Không khẳng định ngắt kết nối HTTP sẽ hủy handler; test hủy `asyncio.Task` trực tiếp |
+
 ## 2026-11-24 · Đợt 10: vòng review PR #2 (R1, R2, R3)
 
 | Mục | Kết quả |
