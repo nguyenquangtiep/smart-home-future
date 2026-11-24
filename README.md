@@ -113,20 +113,30 @@ Chuỗi rỗng hoặc chỉ có khoảng trắng bị từ chối với mã `422
 
 ### Control API (thiết bị giả lập)
 
-Đường điều khiển thiết bị đã có với simulator và nhà mẫu `home-demo`. Chưa có đăng nhập thật: bật danh tính dev bằng
-`SMARTHOME_DEV_IDENTITY_ENABLED=true` (đã có trong `.env.example`) rồi gửi header `X-Dev-User` (`user-owner`, `user-member`,
-`user-guest`). `202` chỉ nghĩa là đã nhận lệnh; đợi `status` thành `succeeded` (đã xác minh), hoặc `timed_out`/`interrupted` (chưa xác
+Đường điều khiển thiết bị chạy với simulator. **Mọi route (kể cả `/api/v1/agent/invoke`) cần đăng nhập**, trừ `GET /health`,
+`POST /api/v1/auth/login` và `POST /api/v1/auth/logout`. Hai cách có danh tính:
+
+- **Đăng nhập thật** (cần PostgreSQL): tạo chủ nhà đầu tiên bằng `python -m smarthome.auth create-owner`, rồi
+  `POST /api/v1/auth/login` (cần header `Origin` hợp lệ). Phiên là cookie `HttpOnly; Secure; SameSite=Strict`; mọi request ghi
+  cần thêm `Origin` và header `X-CSRF-Token` (token trả ở login). Quản lý thành viên: `/api/v1/homes/{id}/members`.
+- **Danh tính dev** (chỉ `local`/`test`): `SMARTHOME_DEV_IDENTITY_ENABLED=true` rồi gửi header `X-Dev-User` (`user-owner`,
+  `user-member`, `user-guest`). Bị từ chối khi khởi động ở `staging`/`production`.
+
+`202` chỉ nghĩa là đã nhận lệnh; đợi `status` thành `succeeded` (đã xác minh), hoặc `timed_out`/`interrupted` (chưa xác
 minh). Chi tiết: [Control API](docs/api/control-api.md).
 
 ### Lưu bền (PostgreSQL)
 
-Không đặt `SMARTHOME_DATABASE_URL` thì lệnh và audit chỉ nằm trong bộ nhớ (dev). Khi `SMARTHOME_ENVIRONMENT=production`, app từ chối
-khởi động nếu thiếu DB hoặc schema chưa đúng phiên bản.
+Không đặt `SMARTHOME_DATABASE_URL` thì lệnh, audit và nhà mẫu chỉ nằm trong bộ nhớ (chỉ `local`/`test`). `SMARTHOME_ENVIRONMENT`
+chỉ nhận `local`, `test`, `staging`, `production`; ngoài `local`/`test` app từ chối khởi động nếu thiếu DB, thiếu
+`SMARTHOME_ALLOWED_ORIGINS`, bật danh tính dev hoặc cookie không `Secure`. Có DB thì **cấu hình nhà lấy từ DB**: DB trống thì app
+từ chối khởi động (không rơi về nhà mẫu).
 
 ```powershell
 $env:SMARTHOME_DATABASE_URL = "postgresql://smarthome:change-me@127.0.0.1:5432/smarthome"
 python -m smarthome.persistence status
 python -m smarthome.persistence upgrade
+python -m smarthome.persistence seed-demo   # chỉ local/test, app phải đang dừng
 ```
 
 Backup trước khi nâng cấp (`pg_dump`). Rollback schema (`downgrade --to 0 --confirm-data-loss`) **xóa dữ liệu**. Dọn dữ liệu

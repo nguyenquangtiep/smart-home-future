@@ -155,6 +155,41 @@ def test_restart_interrupts_unfinished_commands_and_never_resends_them(pg_dsn: s
         assert all(gw.sent == [] for gw in control.gateways.values())
 
 
+def test_unfinished_command_of_a_removed_device_is_reconciled_as_unknown(pg_dsn: str) -> None:
+    """AC-06-11: the device is gone from the configuration, so its state cannot be compared."""
+    seed(pg_dsn)
+    now = datetime.now(UTC)
+
+    async def leave_one_behind() -> None:
+        store = await PostgresCommandStore.open(pg_dsn)
+        record = CommandRecord(
+            id="c-removed-device",
+            home_id=HOME_ID,
+            device_id="dev-living-tv",
+            capability=CapabilityKind.ON_OFF,
+            value=True,
+            actor_id="user-member",
+            origin=Origin.UI,
+            status=CommandStatus.DISPATCHING,
+            created_at=now,
+            updated_at=now,
+        )
+        await store.create(record, None, None, now)
+        await store.close()
+
+    asyncio.run(leave_one_behind())
+    with connect(pg_dsn) as conn:
+        conn.execute("DELETE FROM device_placements WHERE device_id = 'dev-living-tv'")
+        conn.execute("UPDATE devices SET removed_at = now() WHERE id = 'dev-living-tv'")
+    with TestClient(create_app(settings_for(pg_dsn))) as client:
+        body = client.get(
+            f"/api/v1/homes/{HOME_ID}/commands/c-removed-device", headers=OWNER
+        ).json()
+        assert body["status"] == "interrupted"
+        codes = [r["code"] for r in body["reasons"]]
+        assert codes == ["SERVER_RESTARTED", "STATE_UNKNOWN_AFTER_RESTART"]
+
+
 def test_corrupt_capability_json_refuses_startup_and_names_the_device(pg_dsn: str) -> None:
     """AC-06-9."""
     seed(pg_dsn)

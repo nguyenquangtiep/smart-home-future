@@ -1,6 +1,6 @@
 # Hợp đồng API
 
-Base URL khi chạy cục bộ: `http://127.0.0.1:8000`. Schema OpenAPI đầy đủ có tại `/docs` và `/openapi.json`.
+Base URL khi chạy cục bộ: `http://127.0.0.1:8000`. Schema OpenAPI đầy đủ có tại `/docs` và `/openapi.json` (chỉ ở `local`/`test`).
 
 ## `GET /health`
 
@@ -11,6 +11,9 @@ Trả `200`:
 ```
 
 ## `POST /api/v1/agent/invoke`
+
+**Cần đăng nhập** (phiên + `Origin` + `X-CSRF-Token`, hoặc danh tính dev ở `local`/`test`); không có thì `401`. Xem
+[Control API](control-api.md#danh-tính).
 
 Request (`Content-Type: application/json`):
 

@@ -613,6 +613,34 @@ def test_every_security_event_is_recorded_without_secrets(world: World) -> None:
         assert secret and secret not in haystack, secret
 
 
+def test_no_password_or_token_reaches_the_application_log(
+    world: World, caplog: pytest.LogCaptureFixture
+) -> None:
+    """AC-07-3: scan everything logged while logging in, failing, and changing a password."""
+    import logging
+
+    logger = logging.getLogger("smarthome")
+    logger.addHandler(caplog.handler)
+    caplog.set_level(logging.DEBUG, logger="smarthome")
+    try:
+        api = world.api("member")
+        api.post(
+            "/api/v1/auth/login",
+            json={"email": email_of("member"), "password": "wrong-wrong-wrong-1"},
+        )
+        new = "log-scan-fresh-passphrase"
+        api.post(
+            "/api/v1/auth/password",
+            json={"current_password": PASSWORDS["member"], "new_password": new},
+        )
+        token = api.client.cookies.get("smarthome_session") or ""
+    finally:
+        logger.removeHandler(caplog.handler)
+    assert caplog.records, "expected log records from the requests"
+    for secret in (*PASSWORDS.values(), "wrong-wrong-wrong-1", new, token, api.csrf):
+        assert secret and secret not in caplog.text
+
+
 def test_changing_a_password_is_logged_without_the_password(world: World) -> None:
     api = world.api("member")
     new = "another-fresh-member-passphrase"
