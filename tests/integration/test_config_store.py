@@ -22,6 +22,10 @@ from smarthome.persistence.config_store import (
 )
 from smarthome.persistence.postgres import connect
 
+# PostgreSQL 18 reports ON DELETE RESTRICT as 23001 (RestrictViolation); 16 reports 23503
+# (ForeignKeyViolation). Both mean "refused because something still references this row".
+RESTRICTED = (psycopg.errors.RestrictViolation, psycopg.errors.ForeignKeyViolation)
+
 
 def demo() -> HomeConfig:
     return build_demo_config()[0]
@@ -351,18 +355,18 @@ def test_external_ref_uniqueness_and_id_reuse(pg_dsn: str) -> None:
 
 
 def test_delete_rules_use_restrict(pg_dsn: str) -> None:
-    """AC-06-6: RESTRICT raises RestrictViolation (23001), not ForeignKeyViolation (23503)."""
+    """AC-06-6: RESTRICT refuses the delete (23001 on PostgreSQL 18, 23503 on 16)."""
     conn = _seeded(pg_dsn)
-    with pytest.raises(psycopg.errors.RestrictViolation):
+    with pytest.raises(RESTRICTED):
         conn.execute("DELETE FROM floors WHERE home_id = 'home-demo' AND id = 'floor-1'")
-    with pytest.raises(psycopg.errors.RestrictViolation):
+    with pytest.raises(RESTRICTED):
         conn.execute("DELETE FROM rooms WHERE home_id = 'home-demo' AND id = %s", (LIVING,))
     conn.execute("UPDATE devices SET removed_at = now() WHERE room_id = %s", (BEDROOM,))
-    with pytest.raises(psycopg.errors.RestrictViolation):  # soft-deleted devices still block
+    with pytest.raises(RESTRICTED):  # soft-deleted devices still block
         conn.execute("DELETE FROM rooms WHERE home_id = 'home-demo' AND id = %s", (BEDROOM,))
-    with pytest.raises(psycopg.errors.RestrictViolation):
+    with pytest.raises(RESTRICTED):
         conn.execute("DELETE FROM gateway_connections WHERE id = %s", (GATEWAY_ID,))
-    with pytest.raises(psycopg.errors.RestrictViolation):
+    with pytest.raises(RESTRICTED):
         conn.execute("DELETE FROM homes WHERE id = 'home-demo'")
     conn.execute("DELETE FROM devices WHERE id = 'dev-living-tv'")  # hard delete cascades placement
     left = conn.execute(

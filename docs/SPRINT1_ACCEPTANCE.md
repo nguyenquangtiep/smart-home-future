@@ -33,7 +33,7 @@ python -m pytest -rs
 | AC-06-3 | `test_composite_foreign_keys_block_cross_home_rows` (phòng↔tầng, thiết bị↔phòng, thiết bị↔gateway của nhà khác) | ✅ |
 | AC-06-4 | `test_placement_must_match_the_devices_room`, `test_placement_update_and_moving_rooms` | ✅ |
 | AC-06-5 | `test_external_ref_uniqueness_and_id_reuse`, `test_two_homes_may_share_room_ids_and_external_refs`, `test_removed_device_id_can_never_come_back` | ✅ |
-| AC-06-6 | `test_delete_rules_use_restrict` (`RestrictViolation`, cascade placement), `test_room_that_ever_held_a_device_cannot_be_dropped` | ✅ |
+| AC-06-6 | `test_delete_rules_use_restrict` (`RestrictViolation` trên PG 18, `ForeignKeyViolation` trên PG 16; cascade placement), `test_room_that_ever_held_a_device_cannot_be_dropped` | ✅ |
 | AC-06-7 | `tests/unit/test_home_config_validation.py` (đủ ca hợp lệ, không hợp lệ, biên và dung sai 0,05 m) | ✅ |
 | AC-06-8 | `test_version_increments_by_one_and_stale_version_writes_nothing`, `test_concurrent_replace_with_same_version_has_exactly_one_winner`, `test_failed_write_rolls_back_every_table`, `test_load_all_is_one_consistent_snapshot` | ✅ |
 | AC-06-9 | `test_startup.py`: `test_empty_database_refuses_to_start_instead_of_using_the_demo_home`, `test_corrupt_capability_json_refuses_startup_and_names_the_device`, `test_placement_outside_the_room_refuses_startup` | ✅ |
