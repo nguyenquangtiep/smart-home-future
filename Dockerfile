@@ -1,9 +1,13 @@
 FROM python:3.12-slim
 
+# SMARTHOME_ENVIRONMENT=production is the fail-closed default: outside local/test the app needs
+# PostgreSQL, allowed origins and real login, and refuses to start without them. The development
+# Compose file overrides it with "local".
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \n    SMARTHOME_ENVIRONMENT=production
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    SMARTHOME_ENVIRONMENT=production
 
 WORKDIR /app
 
