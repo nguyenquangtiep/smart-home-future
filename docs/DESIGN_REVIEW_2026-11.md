@@ -7,6 +7,11 @@
 > (thiết kế). Rủi ro sản phẩm "chưa có đăng nhập thật" vẫn là Critical ở [SECURITY §7](SECURITY_AND_SAFETY.md#7-rủi-ro-còn-mở)
 > cho tới khi P0-07 xong.
 
+> **Cập nhật 2026-11-24 (sau triển khai Sprint 1).** P0-06b và P0-07 đã có code và test trên PostgreSQL thật
+> ([SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md)). Đóng bằng test: DR-H01, DR-H02, DR-H03, DR-H08, DR-M09, DR-M10, DR-M15, DR-L07, DR-L08.
+> **Development Ready ✅, Test Ready ✅. Production Ready vẫn ❌**: chưa có Home Assistant, web, môi trường triển khai, TLS;
+> Docker chưa kiểm (daemon không chạy lúc triển khai); Argon2id chưa đo trên máy đích.
+
 | Mức sẵn sàng | Kết quả | Căn cứ |
 |---|---|---|
 | **Design Ready** (Sprint 1) | ✅ | LLD v2, ADR có mô hình mối đe dọa, DDL đã thử, không còn mâu thuẫn thiết kế đã biết |
@@ -57,9 +62,9 @@ Ký hiệu trạng thái: ✅ đóng (đã sửa tài liệu hoặc quyết đ�
 
 | ID | Mức | Vấn đề | Trạng thái | Xử lý / bằng chứng |
 |---|---|---|---|---|
-| DR-H01 | High | Cấu hình nhà luôn là seed trong code | 📐 | `api/main.py` `build_control` gọi `build_demo_home()`. LLD P0-06 v2 + ADR 0006; code S1-03, S1-04 |
-| DR-H02 | High | Thiết kế đăng nhập thiếu | 📐 | Hạ từ ✅ ở v1: LLD v1 còn 6 lỗi (LLD P0-07 §1, E1–E6). v2 sửa; code S1-06…08 |
-| DR-H03 | High | Danh tính dev chỉ bị chặn khi `environment == "production"` đúng chữ; phạm vi mở rộng: thiếu DB, `/docs`, Compose đặt `docker` | 📐 | `api/main.py`, `core/config.py`. D-07-9 allowlist, AC-07-14; code S1-01 |
+| DR-H01 | High | Cấu hình nhà luôn là seed trong code | ✅ | `api/main.py` `build_control` gọi `build_demo_home()`. LLD P0-06 v2 + ADR 0006; code S1-03, S1-04 |
+| DR-H02 | High | Thiết kế đăng nhập thiếu | ✅ | Hạ từ ✅ ở v1: LLD v1 còn 6 lỗi (LLD P0-07 §1, E1–E6). v2 sửa; code S1-06…08 |
+| DR-H03 | High | Danh tính dev chỉ bị chặn khi `environment == "production"` đúng chữ; phạm vi mở rộng: thiếu DB, `/docs`, Compose đặt `docker` | ✅ | `api/main.py`, `core/config.py`. D-07-9 allowlist, AC-07-14; code S1-01 |
 | DR-H04 | High | Compose không có Postgres/migrate; build Docker chưa kiểm | ⏳ | `docker-compose.yml`. DEPLOYMENT đã đồng bộ; code P0-17, ngoài Sprint 1 |
 | DR-H05 | High | DATABASE_DESIGN mâu thuẫn schema thật | ✅ | v1 đóng chưa đủ, còn 2 mô tả lỗi thời (DR-M20); đã sửa hết và đối chiếu lại |
 | DR-M01 | Medium | Không ghi được sự kiện cấp người dùng (`audit_events.home_id NOT NULL`) | ✅ | `auth_events`, `login_attempts` ở `0003`; DDL đã thử |
@@ -70,8 +75,8 @@ Ký hiệu trạng thái: ✅ đóng (đã sửa tài liệu hoặc quyết đ�
 | DR-M06 | Medium | `/health` tĩnh | ⏳ | `/health/live` và `/ready` ở P0-16 |
 | DR-M07 | Medium | NFR-01, NFR-02 chưa có phép đo | ⏳ | P0-16 |
 | DR-M08 | Medium | `state_match` cần đồng hồ chính xác | ✅ | NTP trong ADR 0008 và DEPLOYMENT §5 |
-| DR-M09 | Medium | Test cô lập nhà chỉ phủ `/devices` | 📐 | AC-07-10 tham số hóa trên **mọi** route; S1-07 |
-| DR-M10 | Medium | Chưa có chính sách Origin/CORS | 📐 | Cùng origin qua proxy + `SMARTHOME_ALLOWED_ORIGINS` (ADR 0005, DEPLOYMENT §4); S1-07 |
+| DR-M09 | Medium | Test cô lập nhà chỉ phủ `/devices` | ✅ | AC-07-10 tham số hóa trên **mọi** route; S1-07 |
+| DR-M10 | Medium | Chưa có chính sách Origin/CORS | ✅ | Cùng origin qua proxy + `SMARTHOME_ALLOWED_ORIGINS` (ADR 0005, DEPLOYMENT §4); S1-07 |
 | DR-M11 | Medium | Đổi cấu hình lúc chạy chưa làm mới bộ nhớ `ControlService` | ⏳ | LLD P0-13; ở P0 ghi cấu hình chỉ khi app dừng (D-06-8) |
 | DR-L01 | Low | Tên kỹ thuật `smarthome`, `SMARTHOME_` | ⏳ | `product/repo-migration.md` §5 |
 | DR-L02 | Low | Log văn bản, chưa JSON, chưa có command id | ⏳ | P0-16 |
@@ -86,18 +91,18 @@ Ký hiệu trạng thái: ✅ đóng (đã sửa tài liệu hoặc quyết đ�
 |---|---|---|---|---|---|
 | DR-H06 | High | `UNIQUE(gateway, external_ref)` với `gateway` là **tên adapter**: hai nhà cùng dùng HA va chạm entity `light.x`, và không thể có hai gateway cùng loại trong một nhà | LLD v1; `Device.gateway` | D-06-3: gateway là instance có ID riêng, `gateway_connections` vào `0002`. Thử: cùng ref ở hai gateway OK, trùng trong một gateway bị chặn | ✅ |
 | DR-H07 | High | `device_placements.room_id` độc lập với `devices.room_id`, khóa ngoại đơn: placement trỏ phòng khác phòng của thiết bị | LLD v1 | D-06-4: khóa ngoại tổng hợp `(device_id, room_id)`. Thử 5 ca (lệch phòng, thiết bị lạ, đổi phòng khi còn placement…) | ✅ |
-| DR-H08 | High | Thành viên là dict tĩnh nạp lúc khởi động; `confirm()` kiểm lại người yêu cầu bằng dict đó: người bị hạ quyền hoặc gỡ vẫn giữ vai trò cũ khi duyệt | `control/execution.py` `self.members`, `confirm()` | `MembershipSource` tra DB mỗi lần (D-07-6), AC-07-11; S1-05, S1-08 | 📐 |
+| DR-H08 | High | Thành viên là dict tĩnh nạp lúc khởi động; `confirm()` kiểm lại người yêu cầu bằng dict đó: người bị hạ quyền hoặc gỡ vẫn giữ vai trò cũ khi duyệt | `control/execution.py` `self.members`, `confirm()` | `MembershipSource` tra DB mỗi lần (D-07-6), AC-07-11; S1-05, S1-08 | ✅ |
 | DR-M12 | Medium | LLD v1 chỉ lưu **hash** CSRF nhưng `GET /auth/session` phải trả token | LLD P0-07 v1 | Lưu `csrf_token` trong `sessions` (D-07-3) | ✅ |
 | DR-M13 | Medium | Giới hạn thử sai theo IP vô nghĩa sau reverse proxy: mọi request cùng IP proxy, một người sai khóa cả nhà | DEPLOYMENT topology | D-07-8, `SMARTHOME_TRUSTED_PROXY_IPS`, AC-07-5 | ✅ |
 | DR-M14 | Medium | Argon2 trong coroutine (~100 ms CPU) chặn event loop của worker duy nhất, tức chặn cả điều khiển | ADR 0001, LLD v1 | Thread pool (D-07-5), AC-07-17, M-07-1 | ✅ |
-| DR-M15 | Medium | `/api/v1/agent/invoke` không có xác thực | `api/routes/agent.py` (chỉ `Depends(get_graph)`) | Default-deny (D-07-10), AC-07-9; S1-07 | 📐 |
+| DR-M15 | Medium | `/api/v1/agent/invoke` không có xác thực | `api/routes/agent.py` (chỉ `Depends(get_graph)`) | Default-deny (D-07-10), AC-07-9; S1-07 | ✅ |
 | DR-M16 | Medium | `users.id uuid` lệch `commands.actor_id`, `confirmed_by` (text) và ID seed `user-owner` | `0001`, `demo_home.py` | `users.id text` (D-07-4) | ✅ |
 | DR-M17 | Medium | `Device.id` và `commands_one_in_flight_idx` là toàn cục nhưng LLD v1 coi ID thiết bị theo nhà | `execution.py` `self.devices`, `0001` | D-06-1: ID thiết bị duy nhất toàn cục, tự sinh; tầng/phòng theo `(home_id, id)` | ✅ |
 | DR-M18 | Medium | Hai owner hạ quyền nhau đồng thời làm nhà mất owner | LLD v1 không có cơ chế | D-07-12 khóa dòng `homes`. Thử cơ chế khóa trên Postgres; AC-07-12 kiểm đồng thời | ✅ |
 | DR-M19 | Medium | ADR 0005 thiếu mô hình mối đe dọa và ràng buộc WebSocket | ADR 0005 v1 | 15 mối đe dọa (T1–T15), §5 WebSocket | ✅ |
 | DR-M20 | Medium | DATABASE_DESIGN còn "`StateStore` → `device_observations`" và "Alembic" dù DR-H05 đã đóng | `DATABASE_DESIGN.md` §4, §5 (v1) | Viết lại; "Alembic" chỉ còn trong câu phủ định | ✅ |
-| DR-L07 | Low | Route điều khiển simulator đăng ký ở mọi môi trường | `api/routes/homes.py` | Chỉ đăng ký ở `local`/`test` (D-07-9); S1-01 | 📐 |
-| DR-L08 | Low | OpenAPI `/docs`, `/openapi.json` luôn mở | `api/main.py` `FastAPI(...)` | Tắt ngoài `local`/`test`; S1-01 | 📐 |
+| DR-L07 | Low | Route điều khiển simulator đăng ký ở mọi môi trường | `api/routes/homes.py` | Chỉ đăng ký ở `local`/`test` (D-07-9); S1-01 | ✅ |
+| DR-L08 | Low | OpenAPI `/docs`, `/openapi.json` luôn mở | `api/main.py` `FastAPI(...)` | Tắt ngoài `local`/`test`; S1-01 | ✅ |
 | DR-L09 | Low | Vòng import `agent/__init__` ↔ `agent/graph` | Đồ thị import 39 module, 79 cạnh | Chạy được vì `nodes` là submodule; mã scaffold, ghi nhận | ➖ |
 | DR-L10 | Low | `on_report` lưu trạng thái cả cho thiết bị không có trong cấu hình | `execution.py` `on_report` gọi `state.apply` trước kiểm `device is None` | Adapter chỉ chuyển báo cáo của entity đã ánh xạ (P0-09) | ⏳ |
 
@@ -210,9 +215,9 @@ ràng buộc cho bước sau, **không chặn** việc bắt đầu code. Bản 
 |---|---|---|---|
 | C1 | Chủ dự án quyết định D1–D6 của [ADR 0006](adr/0006-home-configuration-source-of-truth.md#5-quyết-định-cần-chủ-dự-án) | Code S1-02, S1-03, S1-04 | ✅ Đã duyệt 2026-11-23 |
 | C2 | Chủ dự án quyết định D1–D6 của [ADR 0005](adr/0005-session-auth-csrf.md#6-quyết-định-cần-chủ-dự-án), gồm dependency `argon2-cffi` | Code S1-01, S1-05…S1-09 | ✅ Đã duyệt 2026-11-23, gồm `argon2-cffi` |
-| C3 | DR-H03 và DR-H08 đóng bằng test (AC-07-14, AC-07-11) | Đóng P0-07 | ⏳ khi code (S1-01, S1-05) |
-| C4 | Đo Argon2id trên máy đích, ghi kết quả (M-07-1) | Đóng P0-07 | ⏳ khi code (S1-07) |
-| C5 | Đạt đủ [tiêu chí thoát Sprint 1](ROADMAP.md#sprint-1-p0-06b-và-p0-07-chốt-thiết-kế-2026-11-23) | Ghi P0-06 hoặc P0-07 là "Đạt" | ⏳ cuối Sprint 1 |
+| C3 | DR-H03 và DR-H08 đóng bằng test (AC-07-14, AC-07-11) | Đóng P0-07 | ✅ 2026-11-24: `test_environment_gate.py`, `test_membership_source.py`, `test_auth_api.py` |
+| C4 | Đo Argon2id trên máy đích, ghi kết quả (M-07-1) | Đóng P0-07 | 🟡 đo trên máy dev: băm 88 ms, xác minh 90 ms (trung vị 12 lần), hơi dưới dải 100 ms–1 s; **máy đích chưa đo** ([SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md#m-07-1-argon2id)) |
+| C5 | Đạt đủ [tiêu chí thoát Sprint 1](ROADMAP.md#sprint-1-p0-06b-và-p0-07-chốt-thiết-kế-2026-11-23) | Ghi P0-06 hoặc P0-07 là "Đạt" | ✅ đạt, trừ mục 2 (M-07-1 máy đích) và mục 3 phần Docker (daemon không chạy, chưa kiểm) |
 | C6 | Không triển khai ra ngoài máy dev cho tới khi xong P0-07 và P0-17 (DR-H03, DR-H04) | Mọi triển khai | ⏳ ràng buộc liên tục |
 | C7 | Viết LLD P0-08 và LLD P0-14 trước khi code các task đó | Sprint 2 và sau | ⏳ trước Sprint 2 |
 

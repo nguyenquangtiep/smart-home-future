@@ -1,6 +1,6 @@
 # ADR 0005: Đăng nhập bằng session phía server, cookie HttpOnly, CSRF token, Argon2id
 
-- **Trạng thái:** ✅ **Accepted** (2026-11-23, chủ dự án duyệt theo khuyến nghị kỹ thuật, D1–D6 ở mục 6) · **Chưa triển khai**
+- **Trạng thái:** ✅ **Accepted** (2026-11-23, chủ dự án duyệt theo khuyến nghị kỹ thuật, D1–D6 ở mục 6) · **Đã triển khai** (Sprint 1, 2026-11-24; bằng chứng: [SPRINT1_ACCEPTANCE](../SPRINT1_ACCEPTANCE.md))
 - **Ngày:** 2026-11-23 (rà soát lần 2) · **Chặn:** P0-07 · **LLD:** [P0-07](../lld/P0-07_AUTH_RBAC.md)
 
 ## 1. Bối cảnh (có dẫn chứng)

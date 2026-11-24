@@ -2,6 +2,24 @@
 
 Mỗi đợt ghi: thay đổi, lý do, kiểm chứng, phần chưa xong. Mới nhất ở trên.
 
+## 2026-11-24 · Đợt 8: Sprint 1 (P0-06b, P0-07)
+
+Nghiệm thu từng tiêu chí: [SPRINT1_ACCEPTANCE.md](SPRINT1_ACCEPTANCE.md). Thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md),
+[LLD P0-07](lld/P0-07_AUTH_RBAC.md). Nhánh `feat/sprint1-persistence-auth-rbac` từ `main` = `a586984`.
+
+| Mục | Kết quả |
+|---|---|
+| Task | S1-01 … S1-09 đều có code và test |
+| Migration | `0002_home_config` (6 bảng), `0003_auth` (5 bảng); `0001` không đổi (có test băm) |
+| Module mới | `domain/config.py`, `control/membership.py`, `bootstrap.py`, `persistence/{config_store,pgconn,seed}.py`, `auth/{passwords,service,store,__main__}.py`, `api/security.py`, `api/routes/{auth,members,simulator}.py` |
+| Endpoint mới | `POST /auth/login`, `GET /auth/session`, `POST /auth/logout`, `POST /auth/password`; `GET/POST /homes/{id}/members`, `PATCH/DELETE /homes/{id}/members/{user_id}` |
+| CLI mới | `python -m smarthome.persistence seed-demo`; `python -m smarthome.auth create-owner / set-password / unlock / disable-user` |
+| Thay đổi hành vi | Mọi route cần đăng nhập (kể cả `/agent/invoke`); `environment` là `Literal`; có DB thì cấu hình nhà từ DB, DB trống thì từ chối khởi động; `ControlService.member` thành async và đọc lại người duyệt; Dockerfile `production`, Compose `local` bind `127.0.0.1` |
+| Dependency mới | `argon2-cffi` (đã duyệt ở ADR 0005) |
+| Kiểm chứng | pytest với Postgres 18 bắt buộc: **428 passed, 0 failed, 0 skipped** (không có Postgres: 311 passed, 117 skipped); ruff đạt (119 file); eval 7/7; Mermaid 49/49 render bằng mermaid-cli 11.17.1 |
+| Bug thật tìm thấy khi viết test | (1) `app.routes` của FastAPI mới chỉ có `_IncludedRouter`, nên test "route nào cũng bị chặn" ban đầu duyệt 0 route và đạt oan; đổi sang `app.openapi()`. (2) `TestClient` không dùng `with` hủy tác vụ nền của simulator khi request kết thúc, làm lệnh kẹt `dispatched`; test dùng chung event loop của lifespan. (3) `real` làm số đọc lại lệch (`2.8` thành `2.7999999523`); đổi `double precision` |
+| Chưa kiểm | Argon2id trên máy đích (đo trên máy dev: 88–90 ms); `docker compose up` và build image (Docker daemon không chạy); Home Assistant; thiết bị thật; TLS; hiệu năng dưới tải |
+
 ## 2026-11-23 · Đợt 7: chốt thiết kế Sprint 1 (Design Finalization)
 
 Báo cáo và sign-off: [DESIGN_REVIEW_2026-11.md](DESIGN_REVIEW_2026-11.md) (v2). Kết luận khi mở PR #1: **PASS WITH CONDITIONS**; sau khi chủ dự án duyệt ADR (2026-11-23): **PASS** cho thiết kế Sprint 1.

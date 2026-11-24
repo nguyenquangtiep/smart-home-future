@@ -3,10 +3,13 @@ services:
     build: .
     image: smart-home-future-api:local
     ports:
-      - "8000:8000"
+      # Development only: bound to this machine, never to the network.
+      - "127.0.0.1:8000:8000"
     env_file:
       - path: .env
         required: false
     environment:
-      SMARTHOME_ENVIRONMENT: docker
+      # Development workflow. Outside local/test the app requires PostgreSQL, real login and
+      # SMARTHOME_ALLOWED_ORIGINS, and refuses to start without them (see docs/DEPLOYMENT.md).
+      SMARTHOME_ENVIRONMENT: local
     restart: unless-stopped

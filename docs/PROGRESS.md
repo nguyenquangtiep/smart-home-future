@@ -1,24 +1,24 @@
 # Báo cáo tiến độ
 
-> **Tóm tắt (2026-11-23).** Đường điều khiển thiết bị đã vững: policy fail-closed, xác minh theo bằng chứng, chống trùng,
-> lưu bền Postgres, khôi phục sau restart, 217 test và CI đạt. **Chưa** có đăng nhập thật, web UI, 3D, Home Assistant hay
-> thiết bị thật. Việc tiếp theo: **P0-07 đăng nhập thật**.
+> **Tóm tắt (2026-11-24).** Sprint 1 xong: cấu hình nhà lưu trong PostgreSQL, đăng nhập thật (phiên, CSRF, Argon2id), RBAC động
+> theo nhà, 428 test đạt với Postgres bắt buộc. **Chưa** có web UI, 3D, Home Assistant, thiết bị thật; Argon2id chưa đo trên
+> máy đích, Docker chưa kiểm. Việc tiếp theo: **Sprint 2 (P0-08 WebSocket, P0-09 Home Assistant)**.
 
 ## 1. Executive Summary
 
 | Câu hỏi | Trả lời |
 |---|---|
-| ✅ **Đã xong** | P0-01 … P0-05 (mô hình thiết bị, policy, execution, simulator, REST API); 2 vòng hardening; tiêu chuẩn Visual-first |
-| 🔧 **Đang làm** | Không có task P0 nào đang mở. Tài liệu Visual-first vừa hoàn tất |
-| 📋 **Còn lại** | 12 task P0 chưa làm, 1 task một phần (P0-06) |
-| ⚠️ **Blocker / rủi ro** | Chưa có đăng nhập thật (Critical). [Design Review 2026-11 v2](DESIGN_REVIEW_2026-11.md): **PASS** cho thiết kế Sprint 1; chủ dự án đã duyệt ADR 0005, 0006 (2026-11-23) nên Sprint 1 được bắt đầu code (chưa có dòng code nào). Cần thông tin Home Assistant và thiết bị pilot cho P0-09 |
-| ➡️ **Tiếp theo** | Sprint 1: P0-06b cấu hình nhà → P0-07 đăng nhập và RBAC → P0-08 WebSocket, P0-09 Home Assistant |
+| ✅ **Đã xong** | P0-01 … P0-07 (mô hình thiết bị, policy, execution, simulator, REST API, lưu bền gồm cấu hình nhà, đăng nhập và RBAC); 2 vòng hardening; tiêu chuẩn Visual-first; Sprint 1 ([nghiệm thu](SPRINT1_ACCEPTANCE.md)) |
+| 🔧 **Đang làm** | Không có task P0 nào đang mở |
+| 📋 **Còn lại** | 11 task P0 chưa làm (P0-08 … P0-18) |
+| ⚠️ **Blocker / rủi ro** | Không còn Critical. High: Argon2id chưa đo trên máy đích; Docker Compose chưa kiểm (daemon không chạy lúc triển khai); chưa có TLS. Cần thông tin Home Assistant và thiết bị pilot cho P0-09 |
+| ➡️ **Tiếp theo** | LLD P0-08 rồi Sprint 2: P0-08 WebSocket, P0-09 Home Assistant |
 
 ### Tiến độ P0
 
 ```
-Đạt       █████░░░░░░░░░░░░░  5 / 18  (28 %)
-Một phần  █░░░░░░░░░░░░░░░░░  1 / 18  (P0-06, không tính vào %)
+Đạt       ███████░░░░░░░░░░░  7 / 18  (39 %)
+Một phần  ░░░░░░░░░░░░░░░░░░  0 / 18
 ```
 *Hình 1. Phương pháp: số task P0 đạt **mọi** tiêu chí nghiệm thu có test, chia tổng 18 task trong [ROADMAP.md](ROADMAP.md).*
 
@@ -27,8 +27,8 @@ Một phần  █░░░░░░░░░░░░░░░░░  1 / 18  (P
 | Khu vực | Task |
 |---|---|
 | Điều khiển | ✅ 01 Capability · ✅ 02 Policy · ✅ 03 Execution · ✅ 04 Simulator · ✅ 05 REST API · ⏳ 14 Scene |
-| Dữ liệu | 🟡 06 Postgres (lệnh, audit: có · nhà, thiết bị: chưa) · ⏳ 10 Cấu hình nhà |
-| Danh tính, realtime | ⏳ 07 Đăng nhập, RBAC · ⏳ 08 WebSocket |
+| Dữ liệu | ✅ 06 Postgres (lệnh, audit, cấu hình nhà) · ⏳ 10 Import cấu hình nhà |
+| Danh tính, realtime | ✅ 07 Đăng nhập, RBAC · ⏳ 08 WebSocket |
 | IoT | ⏳ 09 Home Assistant |
 | Giao diện | ⏳ 11 Web app · ⏳ 12 3D view · ⏳ 13 Sửa vị trí 3D |
 | AI | ⏳ 15 AI Agent |
@@ -57,14 +57,14 @@ timeline
 | `72ee113` | 188 | `███████████████████████████` | ✅ success |
 
 *Hình 4. 0 test lỗi, 0 bỏ qua trên CI ở mọi commit. Từ `72ee113` gồm cả 52–53 test tài liệu. Nguồn: `python -m pytest -q`
-trên máy và log của `gh run view`. Số test hiện tại (217, gồm 81 test tài liệu) và kết quả render Mermaid: xem IMPLEMENTATION_LOG.*
+trên máy và log của `gh run view`. Số test hiện tại (428, gồm 83 test tài liệu) và kết quả render Mermaid: xem IMPLEMENTATION_LOG.*
 
 ### Rủi ro
 
 | Mức | Rủi ro chính |
 |---|---|
-| ⛔ Critical | Chưa có đăng nhập thật |
-| 🔴 High | Cấu hình nhà/thiết bị chưa lưu DB; danh tính dev fail-open theo tên môi trường; Compose chưa có Postgres; chưa có Home Assistant và chưa kiểm thiết bị thật |
+| ⛔ Critical | Không có |
+| 🔴 High | Argon2id chưa đo trên máy đích; chưa có TLS; Compose chưa có Postgres và chưa build thử; chưa có Home Assistant và chưa kiểm thiết bị thật |
 | 🟠 Medium | Audit có thể thiếu khi DB gián đoạn; xác minh `state_match` phụ thuộc đồng hồ; chưa có rate limit |
 | 🟡 Low | Lệnh chờ hết hạn nằm trong bộ nhớ |
 

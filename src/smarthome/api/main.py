@@ -4,17 +4,19 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from smarthome import __version__
 from smarthome.api.deps import get_graph
-from smarthome.api.routes import agent, health, homes
-from smarthome.control.execution import ControlService
+from smarthome.api.routes import agent, auth, health, homes, members, simulator
+from smarthome.api.security import authenticate_request
+from smarthome.auth.service import AuthService
+from smarthome.auth.store import PostgresAuthStore
+from smarthome.bootstrap import build_control, load_configs, open_config_store
 from smarthome.core.config import Settings, get_settings
 from smarthome.core.logging import configure_logging, get_logger
-from smarthome.demo_home import INITIAL_STATE, build_demo_home
-from smarthome.gateway.simulator import SimulatorGateway
 from smarthome.persistence.base import CommandStore
 
 logger = get_logger("api")
@@ -36,58 +38,35 @@ async def open_store(settings: Settings) -> CommandStore:
     return await PostgresCommandStore.open(settings.database_url.get_secret_value())
 
 
-async def build_control(settings: Settings, store: CommandStore) -> ControlService:
-    """Wire the control path. Only the simulator gateway exists today (see task P0-09)."""
-    if settings.device_gateway != "simulator":  # pragma: no cover - guarded by Settings type
-        raise RuntimeError(f"gateway {settings.device_gateway!r} is not implemented")
-    simulator = SimulatorGateway(latency_s=settings.sim_latency_s)
-    home, members, devices = build_demo_home()
-    control = ControlService(
-        homes=[home],
-        members=members,
-        devices=devices,
-        gateways={simulator.name: simulator},
-        store=store,
-        verify_timeout_s=settings.verify_timeout_s,
-        dispatch_timeout_s=settings.dispatch_timeout_s,
-        confirmation_ttl_s=settings.confirmation_ttl_s,
-        idempotency_ttl_s=settings.idempotency_ttl_s,
-        clock_skew_s=settings.verification_clock_skew_s,
-    )
-    # 1) Close out commands a previous process left unfinished (never resent).
-    recovered = await control.recover()
-    # 2) Resync device state from the gateway (the source of truth after a restart).
-    for device_id, values in INITIAL_STATE.items():
-        await simulator.report(device_id, values)
-    # 3) Record what the devices now report for each interrupted command.
-    await control.reconcile_interrupted()
-    if recovered:
-        logger.warning("recovered %d interrupted command(s)", len(recovered))
-    return control
-
-
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
-    if settings.dev_identity_enabled and settings.environment == "production":
-        raise RuntimeError("SMARTHOME_DEV_IDENTITY_ENABLED must not be used in production")
-    if settings.database_url is None and settings.environment == "production":
-        raise RuntimeError("SMARTHOME_DATABASE_URL is required in production")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_graph()  # compile once at startup
         store = await open_store(settings)
+        config_store = await open_config_store(settings)
+        auth_store: PostgresAuthStore | None = None
         try:
+            membership = None
+            if settings.database_url is not None:
+                auth_store = await PostgresAuthStore.open(settings.database_url.get_secret_value())
+                app.state.auth = AuthService(auth_store, settings)
+                membership = auth_store.membership_source()
             # Startup recovery marks unfinished commands INTERRUPTED; only safe if no other
             # instance is running against the same database.
             await store.acquire_instance_lock()
-            app.state.control = await build_control(settings, store)
+            configs = await load_configs(config_store)
+            app.state.control = await build_control(settings, store, configs, membership)
             logger.info(
                 "startup complete gateway=%s durable=%s", settings.device_gateway, store.durable
             )
             yield
         finally:
+            if auth_store is not None:
+                await auth_store.close()
+            await config_store.close()
             await store.close()
 
     app = FastAPI(
@@ -95,8 +74,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         lifespan=lifespan,
         default_response_class=UTF8JSONResponse,
+        # Default-deny: every route needs a session unless it is on PUBLIC_ROUTES.
+        dependencies=[Depends(authenticate_request)],
+        # Interactive docs and the schema are for local/test only (ADR 0005).
+        docs_url="/docs" if settings.permissive else None,
+        redoc_url="/redoc" if settings.permissive else None,
+        openapi_url="/openapi.json" if settings.permissive else None,
     )
     app.state.settings = settings
+    app.state.auth = None  # set at startup when a database is configured
+    if settings.trusted_proxy_ips:
+        # Honour X-Forwarded-For/-Proto only from these proxies; nothing else reads them.
+        app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=list(settings.trusted_proxy_ips))
 
     @app.middleware("http")
     async def access_log(
@@ -117,7 +106,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(agent.router)
+    app.include_router(auth.router)
     app.include_router(homes.router)
+    app.include_router(members.router)
+    if settings.permissive:
+        app.include_router(simulator.router)
     return app
 
 

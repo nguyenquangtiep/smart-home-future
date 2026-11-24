@@ -50,3 +50,6 @@ def pg_dsn(empty_pg_dsn: str) -> str:
     with connect(empty_pg_dsn) as conn:
         migrate.upgrade(conn)
     return empty_pg_dsn
+
+
+from auth_helpers import stack  # noqa: E402, F401  (shared fixture for the auth tests)

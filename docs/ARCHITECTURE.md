@@ -229,10 +229,10 @@ Mô hình 3D không suy ra trạng thái từ lệnh đã gửi. Nó chỉ vẽ 
 
 | Lớp | Cơ chế | Trạng thái |
 |---|---|---|
-| Danh tính | Thành viên của đúng nhà; người ngoài nhận 404 | dev identity: Đã có · auth thật: 📐 [LLD P0-07](lld/P0-07_AUTH_RBAC.md) (ADR 0005 Accepted, chưa triển khai) |
-| Thành viên động | Vai trò tra DB mỗi request và mỗi lần duyệt lệnh (`MembershipSource`). **Hiện là dict tĩnh trong `ControlService`**: người bị hạ quyền vẫn giữ vai trò cũ khi duyệt (DR-H08) | 📐 S1-05, S1-08 |
-| Cổng môi trường | Chỉ `local`/`test` được dễ dãi (bộ nhớ, danh tính dev, seed-demo, `/docs`). **Hiện fail-open**: chỉ chặn khi `environment == "production"` (DR-H03) | 📐 S1-01 |
-| Default-deny | Mọi route trừ `/health`, `login` cần phiên; hiện `/api/v1/agent/invoke` không có xác thực | 📐 S1-07 |
+| Danh tính | Thành viên của đúng nhà; người ngoài nhận 404 | ✅ Đăng nhập thật (phiên phía server, CSRF) và danh tính dev chỉ ở `local`/`test` ([LLD P0-07](lld/P0-07_AUTH_RBAC.md)) |
+| Thành viên động | Vai trò tra DB mỗi request và mỗi lần duyệt lệnh (`MembershipSource`); người duyệt được đọc lại lúc bấm (DR-H08 đã đóng) | ✅ `control/membership.py`, `auth/store.py`, `test_membership_source.py`, `test_auth_api.py` |
+| Cổng môi trường | Chỉ `local`/`test` được dễ dãi (bộ nhớ, danh tính dev, seed-demo, `/docs`, route simulator); `Literal` từ chối giá trị lạ (DR-H03 đã đóng) | ✅ `core/config.py`, `test_environment_gate.py` |
+| Default-deny | Mọi route trừ `/health`, `login`, `logout` cần phiên, gồm `/api/v1/agent/invoke` | ✅ `api/security.py`, `test_every_route_is_denied_without_a_session` |
 | Capability | Thiết bị có hỗ trợ không, có ghi được không, giá trị có hợp lệ không | Đã có |
 | Vai trò | `min_role` theo capability (khách không điều khiển được) | Đã có |
 | Kết nối | Thiết bị offline → từ chối, không gửi mù | Đã có |

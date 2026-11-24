@@ -4,12 +4,15 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from smarthome.api.main import app
+from smarthome.api.main import create_app
+from smarthome.core.config import Settings
 
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
-    with TestClient(app) as c:
+    # The agent endpoint needs a caller since P0-07; the dev identity stands in for a login.
+    settings = Settings(_env_file=None, environment="test", dev_identity_enabled=True)
+    with TestClient(create_app(settings), headers={"X-Dev-User": "user-owner"}) as c:
         yield c
 
 

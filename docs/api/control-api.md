@@ -1,15 +1,51 @@
 # Control API v1
 
-**Trạng thái:** Đã có (`src/smarthome/api/routes/homes.py`), test ở `tests/integration/test_homes_api.py`. Schema đầy đủ ở
-`/docs` khi chạy server.
+**Trạng thái:** Đã có (`src/smarthome/api/routes/`: `homes.py`, `auth.py`, `members.py`, `simulator.py`), test ở
+`tests/integration/test_homes_api.py` và `test_auth_api.py`. Schema đầy đủ ở `/docs` khi chạy server ở `local`/`test` (tắt ở
+`staging`/`production`).
 
 ## Danh tính
 
-Chưa có xác thực thật (P0-07). Tạm thời, khi `SMARTHOME_DEV_IDENTITY_ENABLED=true`, server đọc header `X-Dev-User` và tra thành
-viên của nhà trong URL. Mặc định cờ này tắt và mọi endpoint dưới đây trả `401 AUTH_NOT_CONFIGURED`. Server từ chối khởi
-động nếu bật cờ khi `SMARTHOME_ENVIRONMENT=production`.
+**Mọi route cần đăng nhập**, trừ `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` (default-deny). Có hai nguồn
+danh tính:
 
-Nhà mẫu giả lập `home-demo` có ba người dùng: `user-owner` (chủ nhà), `user-member`, `user-guest`.
+- **Phiên đăng nhập** (cần PostgreSQL): cookie `smarthome_session` (`HttpOnly; Secure; SameSite=Strict`). Request ghi
+  (`POST`, `PUT`, `PATCH`, `DELETE`) cần header `Origin` thuộc `SMARTHOME_ALLOWED_ORIGINS` và `X-CSRF-Token` khớp token trả ở login
+  hoặc `GET /auth/session`. Thiếu hoặc sai → `403 ORIGIN_FORBIDDEN` / `CSRF_FAILED`.
+- **Danh tính dev** (chỉ `local`/`test`, `SMARTHOME_DEV_IDENTITY_ENABLED=true`): header `X-Dev-User` (`user-owner`, `user-member`,
+  `user-guest`). Server từ chối khởi động nếu bật cờ này ở `staging`/`production`. Không có cờ thì header bị bỏ qua.
+
+Không có danh tính nào → `401 UNAUTHENTICATED` (hoặc `AUTH_NOT_CONFIGURED` khi chưa có DB và chưa bật danh tính dev). Quyền vào nhà
+tính **mỗi request** từ bảng `memberships`: gỡ hoặc hạ quyền có hiệu lực ngay.
+
+## Xác thực
+
+| Phương thức | Đường dẫn | Mô tả |
+|---|---|---|
+| POST | `/api/v1/auth/login` | `{email, password}` → `{user, homes, csrf_token}` + cookie. Sai thông tin: `401 INVALID_CREDENTIALS` (cùng thân cho mọi nguyên nhân); quá giới hạn: `429 TOO_MANY_ATTEMPTS` + `Retry-After` |
+| GET | `/api/v1/auth/session` | Phiên hiện tại, cùng thân với login |
+| POST | `/api/v1/auth/logout` | `204`, thu hồi phiên; không có phiên cũng `204` |
+| POST | `/api/v1/auth/password` | `{current_password, new_password}` → `204`, thu hồi mọi phiên khác; `401`, `422 WEAK_PASSWORD`, `429` |
+
+Mật khẩu 12–128 ký tự, không nằm trong danh sách phổ biến, không trùng email. Tối đa 5 lần sai mỗi email và 30 mỗi IP trong 15
+phút (cửa sổ trượt, tính cả email không tồn tại).
+
+## Thành viên (chỉ chủ nhà)
+
+Tiền tố `/api/v1/homes/{home_id}/members`; cần PostgreSQL (không có thì `501 AUTH_NOT_CONFIGURED`).
+
+| Phương thức | Đường dẫn | Mô tả |
+|---|---|---|
+| GET | `` | `[{user_id, email, display_name, role, created_at}]` |
+| POST | `` | `{email, display_name, role, password}` → `201`; `409 EMAIL_IN_USE`, `422` |
+| PATCH | `/{user_id}` | `{role}` → `200`; `409 LAST_OWNER`, `404` |
+| DELETE | `/{user_id}` | `204`; `409 LAST_OWNER`, `404` |
+
+Nhà luôn còn ít nhất một chủ nhà, kể cả khi hai chủ nhà cùng tự hạ quyền (khóa dòng `homes` trong một transaction). Mỗi thay đổi ghi
+`auth_events` và `audit_events` của nhà.
+
+Nhà mẫu giả lập `home-demo` có ba người dùng: `user-owner` (chủ nhà), `user-member`, `user-guest` (không có mật khẩu: chỉ dùng
+qua danh tính dev).
 
 ## Endpoint
 
@@ -24,7 +60,7 @@ Tất cả có tiền tố `/api/v1/homes/{home_id}`. Người không phải th�
 | GET | `/commands/{command_id}` | Trạng thái lệnh |
 | POST | `/commands/{command_id}/confirmation` | Chủ nhà duyệt `{"approve": true}` hoặc từ chối |
 | GET | `/audit` | Nhật ký (chỉ chủ nhà) |
-| PUT | `/simulator/devices/{device_id}/behavior` | Chỉ với simulator, chỉ chủ nhà: `normal`, `silent`, `error`, `offline` |
+| PUT | `/simulator/devices/{device_id}/behavior` | Chỉ `local`/`test`, chỉ simulator, chỉ chủ nhà: `normal`, `silent`, `error`, `offline`. Không tồn tại ở `staging`/`production` |
 
 ## Gửi lệnh
 

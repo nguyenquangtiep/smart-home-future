@@ -1,7 +1,8 @@
 # Security and Safety
 
 > **Tóm tắt.** Policy xác định, **fail-closed** cho thiết bị nguy hiểm; mở khóa và bật bình nóng lạnh cần chủ nhà xác nhận phía
-> server, một lần, có hạn. Rủi ro lớn nhất hiện nay: **chưa có đăng nhập thật** (P0-07).
+> server, một lần, có hạn. Đăng nhập thật, phiên phía server, CSRF, RBAC theo nhà đã có (Sprint 1). Rủi ro lớn nhất hiện nay:
+> chưa kiểm Argon2id trên máy đích, chưa có TLS và triển khai thật (P0-17).
 
 Cập nhật 2026-11-23. Mỗi mục ghi **Đã có** (có test) hoặc mã task kế hoạch.
 
@@ -9,10 +10,10 @@ Cập nhật 2026-11-23. Mỗi mục ghi **Đã có** (có test) hoặc mã task
 
 | Mục | Thiết kế | Trạng thái |
 |---|---|---|
-| Danh tính tạm | `X-Dev-User`, chỉ khi `SMARTHOME_DEV_IDENTITY_ENABLED=true`; mặc định tắt (401). **Hiện chỉ chặn khi `environment == "production"` đúng chữ** (fail-open, DR-H03); thiết kế mới: allowlist `{local, test}` ([LLD P0-07 D-07-9](lld/P0-07_AUTH_RBAC.md#3-quyết-định-thiết-kế)) | ⚠️ PARTIAL (`api/identity.py`, `test_auth_disabled_by_default`, `test_dev_identity_refused_in_production`) |
-| Đăng nhập thật | Mật khẩu Argon2id (trong thread pool), cookie phiên `HttpOnly; Secure; SameSite=Strict`, CSRF token + `Origin` cho request ghi, giới hạn thử sai 5/email và 30/IP trong 15 phút, hết hạn nhàn rỗi 7 / tuyệt đối 30 ngày. Mô hình mối đe dọa: [ADR 0005 §4](adr/0005-session-auth-csrf.md#4-mô-hình-mối-đe-dọa) | 📐 DESIGNED ([LLD P0-07](lld/P0-07_AUTH_RBAC.md), ADR 0005 **Accepted**, chưa triển khai) |
-| RBAC theo nhà | Membership `(user, home, role)`; vai trò owner/member/guest; `min_role` theo capability. Membership tra DB mỗi request và mỗi lần duyệt lệnh (`MembershipSource`) | Policy: ✅ IMPLEMENTED. Membership động: 📐 DESIGNED (hiện dict tĩnh, DR-H08) |
-| Tách dữ liệu giữa nhà | Mọi truy vấn lọc theo `home_id` của danh tính; người ngoài nhận 404 cho cả nhà và thiết bị | **Đã có** (`test_non_member_and_unknown_home_get_404`, `test_unknown_device_is_404`) |
+| Danh tính tạm | `X-Dev-User`, chỉ khi `SMARTHOME_DEV_IDENTITY_ENABLED=true` **và** `environment ∈ {local, test}`; ngoài đó app từ chối khởi động ([LLD P0-07 D-07-9](lld/P0-07_AUTH_RBAC.md#3-quyết-định-thiết-kế)) | ✅ `core/config.py`, `test_environment_gate.py`, `test_a_header_identity_is_never_trusted_without_the_dev_flag` |
+| Đăng nhập thật | Mật khẩu Argon2id (trong thread pool), cookie phiên `HttpOnly; Secure; SameSite=Strict`, CSRF token + `Origin` cho request ghi, giới hạn thử sai 5/email và 30/IP trong 15 phút, hết hạn nhàn rỗi 7 / tuyệt đối 30 ngày. Mô hình mối đe dọa: [ADR 0005 §4](adr/0005-session-auth-csrf.md#4-mô-hình-mối-đe-dọa) | ✅ `auth/`, `api/security.py`, `test_auth_service.py`, `test_auth_api.py`. Giới hạn: M-07-1 chưa đo trên máy đích |
+| RBAC theo nhà | Membership `(user, home, role)`; vai trò owner/member/guest; `min_role` theo capability. Membership tra DB mỗi request và mỗi lần duyệt lệnh (`MembershipSource`); owner cuối không bị gỡ/hạ | ✅ `test_role_matrix_and_isolation_for_every_home_route`, `test_demoted_owner_cannot_approve_a_pending_command`, `test_two_owners_demoting_each_other_at_once_leave_one_owner` |
+| Tách dữ liệu giữa nhà | Mọi truy vấn lọc theo `home_id` của danh tính; người ngoài nhận 404 cho cả nhà và thiết bị; khóa ngoại tổng hợp theo `home_id` ở DB | ✅ test tham số hóa trên **mọi** route theo nhà (AC-07-10) và `test_composite_foreign_keys_block_cross_home_rows` |
 | WebSocket | Cùng cookie phiên khi bắt tay (không token trong URL), kiểm `Origin`, kiểm membership, một chiều server → client, đóng kết nối ≤ 60 giây sau khi phiên/membership bị thu hồi ([ADR 0005 §5](adr/0005-session-auth-csrf.md#5-websocket-ràng-buộc-cho-adr-0007)) | 📐 DESIGNED (P0-08, chưa có LLD) |
 
 ## 2. Ma trận hành động (nhà mẫu)
@@ -98,8 +99,8 @@ mọi kế hoạch qua validate + policy, nên văn bản bị chèn không tạ
 
 | Mức | Bảo mật | Dữ liệu | Thiết bị / IoT | Vận hành |
 |---|---|---|---|---|
-| ⛔ **Critical** | Chưa có đăng nhập thật (P0-07) | | | |
-| 🔴 **High** | Danh tính dev chỉ bị chặn khi `environment == "production"` đúng chữ (DR-H03, sửa trong P0-07) | Cấu hình nhà, thiết bị, thành viên chưa lưu DB (P0-06b) | Chưa có adapter Home Assistant, chưa kiểm thiết bị thật (P0-09) | |
+| ⛔ **Critical** | Không còn mục Critical mở sau Sprint 1; **không** nối thiết bị thật hay triển khai ra ngoài máy dev trước P0-17 | | | |
+| 🔴 **High** | Argon2id chưa đo trên máy đích (M-07-1); chưa có TLS (cần reverse proxy, P0-17) | Cấu hình ghi lúc chạy chưa có (chỉ khi app dừng, P0-13) | Chưa có adapter Home Assistant, chưa kiểm thiết bị thật (P0-09) | |
 | 🟠 **Medium** | Chưa có rate limit; chưa tách role DB cho audit | Audit có thể thiếu khi DB gián đoạn (chỉ log) | `state_match` phụ thuộc đồng hồ gateway; HA `assumed_state` | |
 | 🟡 **Low** | | | | Lệnh chờ xác nhận hết hạn nằm trong bộ nhớ tới khi được truy cập |
 
@@ -107,7 +108,7 @@ mọi kế hoạch qua validate + policy, nên văn bản bị chèn không tạ
 
 | Rủi ro | Mức | Xử lý |
 |---|---|---|
-| Chưa có auth thật | Cao | Dev identity mặc định tắt; P0-07 trước khi chạy ngoài máy dev |
+| Đăng nhập thật đã có nhưng chưa chạy trên máy đích, chưa có TLS | Cao | Compose dev chỉ bind `127.0.0.1`; không triển khai trước P0-17; đo Argon2id (M-07-1) |
 | Không đặt `SMARTHOME_DATABASE_URL` thì lệnh và audit ở bộ nhớ | Trung bình | Production từ chối khởi động khi thiếu DB |
 | Ghi audit thất bại (DB lỗi) chỉ được log, không chặn điều khiển: có thể thiếu dòng audit trong lúc DB gián đoạn | Trung bình | Cảnh báo/giám sát ở P0-16 |
 | Xác minh `state_match` (không correlation) dựa vào đồng hồ gateway trong ngưỡng 1 s | Trung bình | Ưu tiên correlation (HA `context.id`) ở P0-09 |

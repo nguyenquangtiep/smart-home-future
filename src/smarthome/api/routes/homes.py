@@ -19,7 +19,6 @@ from smarthome.control.policy import CommandRequest
 from smarthome.domain.capabilities import Role
 from smarthome.domain.models import Home
 from smarthome.domain.state import DeviceView
-from smarthome.gateway.simulator import SimBehavior, SimulatorGateway
 
 router = APIRouter(prefix="/api/v1/homes/{home_id}", tags=["homes"])
 
@@ -40,10 +39,6 @@ class HomeResponse(BaseModel):
 
 class ConfirmationBody(BaseModel):
     approve: bool
-
-
-class SimBehaviorBody(BaseModel):
-    behavior: SimBehavior
 
 
 def _store_unavailable(exc: StoreUnavailableError) -> HTTPException:
@@ -149,24 +144,3 @@ async def list_audit(home_id: str, actor: ActorDep, control: ControlDep) -> list
             detail={"code": "FORBIDDEN_ROLE", "message": "Chỉ chủ nhà xem được nhật ký."},
         )
     return await control.list_audit(actor.home_id)
-
-
-@router.put("/simulator/devices/{device_id}/behavior", status_code=status.HTTP_204_NO_CONTENT)
-async def set_sim_behavior(
-    home_id: str,
-    device_id: str,
-    body: SimBehaviorBody,
-    actor: ActorDep,
-    control: ControlDep,
-) -> None:
-    """Simulator only: make a simulated device silent, failing or offline to test error paths."""
-    sim = control.gateways.get("simulator")
-    if not isinstance(sim, SimulatorGateway) or actor.role is not Role.OWNER:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "FORBIDDEN"})
-    try:
-        device = control.device_in_home(actor.home_id, device_id)
-    except NotFoundError as exc:
-        raise _not_found(exc) from None
-    if device.gateway != "simulator":
-        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "NOT_SIMULATED"})
-    await sim.set_behavior(device.id, body.behavior)

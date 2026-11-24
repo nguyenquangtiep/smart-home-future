@@ -5,6 +5,8 @@ Commands:
   upgrade [--to N]                         apply pending migrations (back up first)
   downgrade --to N --confirm-data-loss     roll back migrations above N (destroys their data)
   purge                                    delete finished commands and audit past retention
+  seed-demo                                create the simulated demo home (local/test only,
+                                           the application must be stopped)
 
 Reads the connection string from SMARTHOME_DATABASE_URL (or .env).
 """
@@ -14,10 +16,12 @@ import asyncio
 import sys
 from datetime import timedelta
 
-from smarthome.core.config import get_settings
+from smarthome.core.config import Settings, get_settings
 from smarthome.domain.state import utc_now
 from smarthome.persistence import migrate
+from smarthome.persistence.base import InstanceLockError
 from smarthome.persistence.postgres import PostgresCommandStore, connect
+from smarthome.persistence.seed import SeedRefusedError, seed_demo
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -30,6 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     down.add_argument("--to", type=int, required=True)
     down.add_argument("--confirm-data-loss", action="store_true")
     sub.add_parser("purge")
+    sub.add_parser("seed-demo")
     args = parser.parse_args(argv)
 
     settings = get_settings()
@@ -43,6 +48,9 @@ def main(argv: list[str] | None = None) -> int:
             _purge(dsn, settings.command_retention_days, settings.audit_retention_days)
         )
 
+    if args.command == "seed-demo":
+        return asyncio.run(_seed(settings))
+
     with connect(dsn) as conn:
         if args.command == "status":
             print(f"current={migrate.current_version(conn)} latest={migrate.latest_version()}")
@@ -53,6 +61,19 @@ def main(argv: list[str] | None = None) -> int:
                 print("refusing: downgrade drops data; pass --confirm-data-loss", file=sys.stderr)
                 return 2
             print(f"reverted={migrate.downgrade(conn, args.to)}")
+    return 0
+
+
+async def _seed(settings: Settings) -> int:
+    try:
+        outcome = await seed_demo(settings)
+    except SeedRefusedError as exc:
+        print(f"refusing: {exc}", file=sys.stderr)
+        return 2
+    except InstanceLockError:
+        print("refusing: the application is running; stop it first", file=sys.stderr)
+        return 2
+    print(f"seed-demo: {outcome}")
     return 0
 
 
