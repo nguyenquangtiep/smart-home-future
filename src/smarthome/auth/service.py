@@ -8,6 +8,8 @@ Rules enforced here:
   * a session dies on idle time, absolute age, revocation or when its user is disabled.
 """
 
+import asyncio
+import contextlib
 import hashlib
 import hmac
 import secrets
@@ -15,7 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from smarthome.auth import passwords
-from smarthome.auth.store import HomeRole, PostgresAuthStore, SessionRow
+from smarthome.auth.store import HomeRole, PostgresAuthStore, SessionRow, UserRow
 from smarthome.core.config import Settings
 from smarthome.domain.state import Clock, utc_now
 
@@ -71,6 +73,8 @@ class AuthService:
         self.store = store
         self.settings = settings
         self._clock = clock
+        # Strong references to shielded audit writes that outlive a cancelled request.
+        self._background: set[asyncio.Task[None]] = set()
 
     def now(self) -> datetime:
         return self._clock()
@@ -87,54 +91,99 @@ class AuthService:
         now = self._clock()
         digest = email_digest(email)
         attempt_id = await self._reserve(digest, ip, now, user_id=None)
-
-        user = await self.store.find_user_by_email(email)
-        usable = user is not None and user.password_hash is not None and user.disabled_at is None
-        # Always spend one hash verification, on a dummy when there is nothing to check.
-        stored = user.password_hash if (usable and user and user.password_hash) else None
-        ok = await self._verify(attempt_id, digest, ip, now, None, stored, password)
-        if not (usable and ok and user):
-            reason = (
-                "unknown_user"
-                if user is None
-                else "disabled"
-                if user.disabled_at
-                else "no_password"
-                if user.password_hash is None
-                else "bad_password"
+        # From here the reserved attempt counts as a failure until proven otherwise. If the task
+        # is cancelled at any later point, it stays a failure (cancelling is never a free guess)
+        # and the cancellation is recorded; no session is handed out (R4).
+        stage = "before_verify"
+        user: UserRow | None = None
+        try:
+            user = await self.store.find_user_by_email(email)
+            usable = (
+                user is not None and user.password_hash is not None and user.disabled_at is None
             )
-            await self.store.finish_attempt(
-                attempt_id, False, now, user.id if user else None, "login_failed", digest, ip,
-                reason,
-            )  # fmt: skip
-            raise InvalidCredentialsError
+            # Always spend one hash verification, on a dummy when there is nothing to check.
+            stored = user.password_hash if (usable and user and user.password_hash) else None
+            stage = "verifying"
+            ok = await self._verify(attempt_id, digest, ip, now, None, stored, password)
+            stage = "recording_result"
+            if not (usable and ok and user):
+                reason = (
+                    "unknown_user"
+                    if user is None
+                    else "disabled"
+                    if user.disabled_at
+                    else "no_password"
+                    if user.password_hash is None
+                    else "bad_password"
+                )
+                await self.store.finish_attempt(
+                    attempt_id, False, now, user.id if user else None, "login_failed", digest,
+                    ip, reason,
+                )  # fmt: skip
+                raise InvalidCredentialsError
 
-        await self.store.finish_attempt(
-            attempt_id, True, now, user.id, "login_succeeded", digest, ip
-        )
-        old = await self._session_for(current_token) if current_token else None
-        token = secrets.token_urlsafe(32)
-        csrf = secrets.token_urlsafe(32)
-        expires_at = now + timedelta(days=self.settings.session_max_days)
-        session_id = await self.store.create_session(
-            user.id, token_digest(token), csrf, now, expires_at, old.id if old else None
-        )
-        principal = Principal(user.id, user.email, user.display_name, session_id, csrf)
-        homes = await self.store.homes_for_user(user.id)
-        return LoginResult(principal, homes, token, csrf, expires_at)
+            await self.store.finish_attempt(
+                attempt_id, True, now, user.id, "login_succeeded", digest, ip
+            )
+            stage = "creating_session"
+            old = await self._session_for(current_token) if current_token else None
+            token = secrets.token_urlsafe(32)
+            csrf = secrets.token_urlsafe(32)
+            expires_at = now + timedelta(days=self.settings.session_max_days)
+            session_id = await self.store.create_session(
+                user.id, token_digest(token), csrf, now, expires_at, old.id if old else None
+            )
+            principal = Principal(user.id, user.email, user.display_name, session_id, csrf)
+            homes = await self.store.homes_for_user(user.id)
+            return LoginResult(principal, homes, token, csrf, expires_at)
+        except asyncio.CancelledError:
+            await self._record_cancel(attempt_id, now, user.id if user else None, digest, ip, stage)
+            raise
+
+    async def _record_cancel(
+        self,
+        attempt_id: int | None,
+        now: datetime,
+        user_id: str | None,
+        digest: bytes,
+        ip: str | None,
+        stage: str,
+    ) -> None:
+        """Record a cancelled attempt. Runs to completion even if the caller is cancelled
+        again; the attempt row itself is left as a failure (finish_attempt with succeeded=False
+        changes nothing in login_attempts, it only adds the security event)."""
+        if attempt_id is None:
+            write = self.store.record_event(
+                now, "login_cancelled", user_id, email_hash=digest.hex(), ip=ip, reason=stage
+            )
+        else:
+            write = self.store.finish_attempt(
+                attempt_id, False, now, user_id, "login_cancelled", digest, ip, stage
+            )
+        task = asyncio.ensure_future(write)
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.shield(task)
 
     async def _reserve(
         self, digest: bytes, ip: str | None, now: datetime, user_id: str | None
     ) -> int:
         """Take an attempt slot atomically in PostgreSQL, or raise TooManyAttemptsError."""
-        slot = await self.store.reserve_attempt(
-            digest,
-            ip,
-            now,
-            timedelta(seconds=self.settings.login_window_s),
-            self.settings.login_max_failures_email,
-            self.settings.login_max_failures_ip,
-        )
+        try:
+            slot = await self.store.reserve_attempt(
+                digest,
+                ip,
+                now,
+                timedelta(seconds=self.settings.login_window_s),
+                self.settings.login_max_failures_email,
+                self.settings.login_max_failures_ip,
+            )
+        except asyncio.CancelledError:
+            # The reservation may still commit in its worker thread; then it simply counts as a
+            # failure. Its id is unknown here, so only the event is recorded.
+            await self._record_cancel(None, now, user_id, digest, ip, "reserving")
+            raise
         if slot.attempt_id is None:
             assert slot.retry_after is not None
             await self.store.record_event(
@@ -201,20 +250,27 @@ class AuthService:
         now = self._clock()
         digest = email_digest(principal.email)
         attempt_id = await self._reserve(digest, ip, now, principal.user_id)
-        user = await self.store.get_user(principal.user_id)
-        stored = user.password_hash if user else None
-        ok = await self._verify(
-            attempt_id, digest, ip, now, principal.user_id, stored, current_password
-        )
-        if not (user and stored and ok):
+        stage = "before_verify"
+        try:
+            user = await self.store.get_user(principal.user_id)
+            stored = user.password_hash if user else None
+            stage = "verifying"
+            ok = await self._verify(
+                attempt_id, digest, ip, now, principal.user_id, stored, current_password
+            )
+            stage = "recording_result"
+            if not (user and stored and ok):
+                await self.store.finish_attempt(
+                    attempt_id, False, now, principal.user_id, "login_failed", digest, ip,
+                    "bad_current_password",
+                )  # fmt: skip
+                raise InvalidCredentialsError
             await self.store.finish_attempt(
-                attempt_id, False, now, principal.user_id, "login_failed", digest, ip,
-                "bad_current_password",
-            )  # fmt: skip
-            raise InvalidCredentialsError
-        await self.store.finish_attempt(
-            attempt_id, True, now, principal.user_id, "password_verified", digest, ip
-        )
+                attempt_id, True, now, principal.user_id, "password_verified", digest, ip
+            )
+        except asyncio.CancelledError:
+            await self._record_cancel(attempt_id, now, principal.user_id, digest, ip, stage)
+            raise
         checked = passwords.check_policy(new_password, principal.email)  # WeakPasswordError
         new_hash = await passwords.hash_password(checked)
         assert principal.session_id is not None
