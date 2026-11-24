@@ -2,6 +2,16 @@
 
 Mỗi đợt ghi: thay đổi, lý do, kiểm chứng, phần chưa xong. Mới nhất ở trên.
 
+## 2026-11-24 · Đợt 10: vòng review PR #2 (R1, R2, R3)
+
+| Mục | Kết quả |
+|---|---|
+| R1 | `DEPLOYMENT.md` viết lại phần hiện trạng và cấu hình (hết mô tả Compose `docker`, cổng fail-open, "sẽ làm"); tách hiện tại và mục tiêu P0-17; ADR 0005 §1, ADR 0008 đánh dấu phần lịch sử |
+| R2 | Smoke test dùng `docker rm -fv`, thư mục tạm cho headers/cookie/CSRF, `cleanup` ở mọi lối thoát; script cũ được đo là bỏ lại 1 volume mỗi lần chạy. `docker_smoke_cleanup_check.sh` ép lỗi ở `db`, `app`, `restart` và xác nhận không sót gì (máy dev); CI kiểm cả hai đường |
+| R3 | Trước: 24 đăng nhập khác email/IP → 16 phép Argon2id cùng lúc (~1 GiB), hàng đợi vô hạn. Sau: tối đa 2 cùng lúc (đo lại: đỉnh 2, ~128 MiB), hàng đợi 16, chờ 5 s, `503 AUTH_BUSY`; lần thử bận được trả lại và ghi `login_busy`. Test F2 nới giới hạn hasher để vẫn đo riêng rate limiter |
+| Docker máy dev | Docker Desktop chạy lại được: `docker compose config`, `docker build`, smoke test 30/30 đạt |
+| Kiểm chứng | pytest Postgres bắt buộc: **444 passed, 0 failed, 0 skipped** (không Postgres: 317 passed, 127 skipped); ruff đạt; eval 7/7; Mermaid render |
+
 ## 2026-11-24 · Đợt 9: nghiệm thu bổ sung Sprint 1 (F1, F2, F3)
 
 Chi tiết: [SPRINT1_ACCEPTANCE §Nghiệm thu bổ sung](SPRINT1_ACCEPTANCE.md#nghiệm-thu-bổ-sung-2026-11-24-f1-f2-f3). Nhánh

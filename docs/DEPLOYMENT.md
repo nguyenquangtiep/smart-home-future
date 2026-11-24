@@ -18,7 +18,7 @@
 | Khởi động có DB | Kiểm schema version, lấy instance lock, nạp cấu hình nhà từ DB (DB trống hoặc dữ liệu sai → thoát), recover, reconcile | `api/main.py`, `bootstrap.py`, `tests/integration/test_startup.py` |
 | CLI vận hành | `python -m smarthome.persistence upgrade / status / downgrade / purge / seed-demo` (seed chỉ `local`/`test`, cần app dừng); `python -m smarthome.auth create-owner / set-password / unlock / disable-user` (mật khẩu qua prompt hoặc stdin) | `persistence/__main__.py`, `auth/__main__.py` |
 | CI | Job `checks`: ruff, pytest với Postgres 16 bắt buộc, eval, render Mermaid. Job `docker`: hadolint, build, chạy image với PostgreSQL 16 (migration, đăng nhập thật, CSRF, restart, healthcheck), Compose dev, kiểm dọn dẹp khi smoke test lỗi giữa chừng | `.github/workflows/ci.yml`, [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175) |
-| Docker trên máy dev | ⛔ Docker Desktop (Windows) crash khi khởi động; bằng chứng Docker chỉ từ CI | [SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md#nghiệm-thu-bổ-sung-2026-11-24-f1-f2-f3) |
+| Docker trên máy dev | ✅ `scripts/docker_smoke.sh` đạt 30/30 trên Docker Desktop 29.6.1 (Windows, 2026-11-24), sau một lần Docker Desktop crash khi khởi động rồi tự chạy lại | [SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md#nghiệm-thu-bổ-sung-2026-11-24-f1-f2-f3) |
 
 ## 2. Topology mục tiêu
 
@@ -100,7 +100,7 @@ trong Compose, `/health/ready` (P0-16), lệnh `import` cấu hình nhà (P0-10;
 
 | Mục | Trạng thái |
 |---|---|
-| Image và Compose dev | ✅ trong CI; ⛔ trên máy dev (Docker Desktop lỗi) |
+| Image và Compose dev | ✅ trong CI và trên máy dev |
 | Compose production (proxy TLS, Postgres, migrate, backup) | Chưa có, P0-17 |
 | Tài nguyên app + Postgres trên mini PC; Argon2id trên máy đích | Chưa đo (M-07-1: PENDING TARGET HARDWARE) |
 | VPN, khôi phục backup, NTP | Chưa thử |

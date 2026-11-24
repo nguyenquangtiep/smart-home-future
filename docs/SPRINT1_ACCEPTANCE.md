@@ -2,8 +2,9 @@
 
 > **Tóm tắt (2026-11-24).** P0-06b (cấu hình nhà trong PostgreSQL) và P0-07 (đăng nhập, RBAC) đã có code. 13 tiêu chí AC-06 và
 > 20 tiêu chí AC-07 đều có test chạy trên PostgreSQL thật; DR-H03 và DR-H08 đóng bằng test. Đợt nghiệm thu bổ sung sửa F1
-> (Dockerfile), F2 (throttle đăng nhập dưới tải đồng thời) và kiểm Docker trong CI (F3). **Còn mở:** Argon2id trên máy đích
-> (M-07-1, PENDING TARGET HARDWARE), Docker trên máy dev, Home Assistant, thiết bị thật. Nguồn thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md),
+> (Dockerfile), F2 (throttle đăng nhập dưới tải đồng thời), kiểm Docker (F3) trong CI và trên máy dev, và vòng review
+> PR #2 sửa R1 (tài liệu), R2 (dọn dẹp smoke test), R3 (giới hạn Argon2id đồng thời). **Còn mở:** Argon2id trên máy đích
+> (M-07-1, PENDING TARGET HARDWARE), Home Assistant, thiết bị thật, topology production (P0-17). Nguồn thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md),
 > [LLD P0-07](lld/P0-07_AUTH_RBAC.md).
 
 ```mermaid
@@ -74,7 +75,7 @@ python -m pytest -rs
 |---|---|---|---|---|---|---|
 | F1 Dockerfile | High | ❌ `docker build` hỏng | Lần sửa trước chèn chuỗi `\n` theo nghĩa đen vào lệnh `ENV` nhiều dòng (công cụ sửa file thay vì xuống dòng thật) | Sửa thành dòng nối `\` đúng; gộp hai `RUN` (hadolint DL3059) | `tests/unit/test_dockerfile.py` (5 test: đạt trên file đã sửa, **3 lỗi trên file cũ**); `docker build` và kiểm biến trong container ở [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175) | ✅ |
 | F2 Throttle đăng nhập | High | ❌ 20 lần thử đồng thời đều được kiểm mật khẩu (giới hạn 5); 40 lần từ một IP đều được kiểm (giới hạn 30) | "Đọc số lần sai → xác minh Argon2id (~90 ms) → ghi" là ba bước rời nhau: mọi request đồng thời đọc cùng một số đếm thấp | `reserve_attempt`: **một** transaction ngắn lấy advisory lock theo email rồi IP (luôn theo thứ tự này, không deadlock), đếm, rồi chèn lần thử như **thất bại** trước khi xác minh; khóa nhả lúc commit nên không giữ khóa khi Argon2id chạy. Thành công thì `finish_attempt` đổi thành `succeeded`. Áp dụng cả đổi mật khẩu | `tests/integration/test_login_rate_limit_concurrency.py` (5 test, mỗi lần thử một kết nối PostgreSQL riêng): **4 lỗi trước khi sửa**, đạt sau khi sửa | ✅ |
-| F3 Docker runtime | High | ⛔ chưa kiểm (Docker Desktop trên máy dev không chạy) | Máy dev: Docker Desktop crash khi khởi động (socket `dockerInference` cũ không xóa được) | Thêm `scripts/docker_smoke.sh` và job `docker` trong CI (hadolint + smoke test) | [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175), commit `06a2c6d`: 30 kiểm tra đạt (bảng dưới) | ✅ trong CI · ⛔ máy dev |
+| F3 Docker runtime | High | ⛔ chưa kiểm (Docker Desktop trên máy dev không chạy) | Máy dev: Docker Desktop crash khi khởi động (socket `dockerInference` cũ không xóa được) | Thêm `scripts/docker_smoke.sh` và job `docker` trong CI (hadolint + smoke test) | [CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175), commit `06a2c6d`: 30 kiểm tra đạt (bảng dưới) | ✅ trong CI · ✅ máy dev (sau khi Docker Desktop chạy lại) |
 
 Smoke test Docker (job `docker`, runner Linux, chỉ publish cổng `127.0.0.1`):
 
@@ -88,6 +89,24 @@ Smoke test Docker (job `docker`, runner Linux, chỉ publish cổng `127.0.0.1`)
 | Compose dev | `docker compose config`; app trả `/health`; chỉ publish `127.0.0.1:8000` |
 
 Compose dev hiện tại chỉ có app, nhà mẫu trong bộ nhớ. **Topology production (proxy TLS, PostgreSQL, backup, migrate) là P0-17, chưa kiểm chứng.**
+
+### Vòng review PR #2 (R1, R2, R3) và bảng trạng thái
+
+| Finding | Nguyên nhân / bằng chứng trước | Sửa | Bằng chứng sau | Trạng thái |
+|---|---|---|---|---|
+| F1 Dockerfile | `\n` theo nghĩa đen trong `ENV` | xem trên | `test_dockerfile.py`; hadolint và build trong CI; build trên máy dev | **FIXED + CI PASS** |
+| F2 Rate limiter race | 20 lần đồng thời đều được kiểm mật khẩu | xem trên | `test_login_rate_limit_concurrency.py` (PostgreSQL thật, mỗi lần một kết nối) | **FIXED + CONCURRENCY TEST PASS** |
+| F3 Docker runtime | chưa kiểm | `scripts/docker_smoke.sh` | 30 kiểm tra đạt trong CI **và** trên máy dev (Docker Desktop 29.6.1 chạy lại được, 2026-11-24) | **VERIFIED IN CI + LOCAL** |
+| R1 Tài liệu Deployment | `DEPLOYMENT.md` còn ghi Compose dùng `docker`, cổng môi trường fail-open, "sau S1-01 sẽ…", `create-owner` chưa có code, cần `--proxy-headers` | Viết lại §1 Hiện trạng, §4 Cấu hình, §6; tách rõ hiện tại và mục tiêu P0-17; ADR 0005 §1 và ADR 0008 đánh dấu phần lịch sử | test tài liệu (link, anchor) đạt | **FIXED** |
+| R2 Dọn dẹp smoke test | Script cũ dùng `docker rm -f` (bỏ lại volume ẩn danh của postgres: **đo được 1 volume sót mỗi lần chạy**) và để file headers/cookie trong thư mục làm việc nếu lỗi giữa chừng | `docker rm -fv`; thư mục tạm `mktemp -d` cho headers, cookie, CSRF, xóa trong `cleanup` ở mọi lối thoát (kể cả Ctrl-C), giữ mã thoát; `compose down --volumes --remove-orphans`; `SMOKE_FAIL_AT` để ép lỗi | `scripts/docker_smoke_cleanup_check.sh`: ép lỗi ở `db`, `app`, `restart` → thư mục tạm bị xóa, không sót container/network `shf-smoke-*`, tập volume không đổi, log không chứa mật khẩu/cookie/CSRF (máy dev); bước CI kiểm cả đường thành công và lỗi | **FIXED + VERIFIED** |
+| R3 Argon2id đồng thời | Giới hạn theo email/IP không chặn tổng: 24 lần đăng nhập khác email/IP chạy **16 phép Argon2id cùng lúc (~1 GiB)**, chỉ bị chặn bởi thread pool, hàng đợi vô hạn | `passwords.py`: tối đa `SMARTHOME_ARGON2_MAX_CONCURRENT` (2) phép cùng lúc, tối đa `SMARTHOME_ARGON2_MAX_PENDING` (16) đang chạy hoặc chờ, chờ tối đa `SMARTHOME_ARGON2_WAIT_S` (5 s); vượt thì `503 AUTH_BUSY` + `Retry-After: 1`, cùng thân cho mọi email; lần thử đã giữ chỗ được trả lại (không tính là sai) và ghi `login_busy` | `test_argon2_concurrency.py` (5 test, PostgreSQL thật): đỉnh ≤ giới hạn, quá tải bị từ chối ngay, timeout, đăng nhập bình thường không đổi, HTTP 503. Đo lại: **đỉnh 2 phép (~128 MiB)** | **FIXED** |
+| M-07-1 Benchmark máy đích | — | `scripts/bench_argon2.py` | số tham khảo máy dev | **PENDING TARGET HARDWARE** |
+
+Lựa chọn cho R3: một semaphore trong tiến trình (không cần đa tiến trình vì triển khai là một worker, một instance: ADR 0001)
+cộng một bộ đếm hàng đợi có trần, thay vì worker pool riêng hay giới hạn trong PostgreSQL: đơn giản nhất, không chặn event loop
+(chờ diễn ra trong thread), không hàng đợi vô hạn. Đánh đổi: dưới tải cực lớn người dùng thật có thể nhận `503` và phải thử lại;
+giới hạn theo tiến trình sẽ phải xem lại nếu có nhiều instance (ADR 0001 thay đổi).
+
 
 ## M-07-1: Argon2id
 
@@ -119,7 +138,7 @@ Compose dev hiện tại chỉ có app, nhà mẫu trong bộ nhớ. **Topology 
 | Mục | Trạng thái |
 |---|---|
 | Argon2id trên máy đích | PENDING TARGET HARDWARE (M-07-1) |
-| `docker build`, `docker compose up` | ✅ trong CI ([CI run 45352819175](https://github.com/nguyenquangtiep/smart-home-future/actions/runs/45352819175)). ⛔ Trên máy dev: Docker Desktop crash khi khởi động, chưa chạy được |
+| `docker build`, `docker compose up` | ✅ trong CI và trên máy dev (30 kiểm tra của `scripts/docker_smoke.sh`) |
 | Topology production (proxy TLS, PostgreSQL, backup) | Chưa có, P0-17 |
 | Home Assistant, thiết bị thật, TLS, hiệu năng dưới tải | Chưa có (P0-09, P0-17) |
 | WebSocket, UI đăng nhập | Ngoài Sprint 1 (P0-08, P0-11) |

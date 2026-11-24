@@ -1,8 +1,8 @@
 # Báo cáo tiến độ
 
 > **Tóm tắt (2026-11-24).** Sprint 1 xong: cấu hình nhà lưu trong PostgreSQL, đăng nhập thật (phiên, CSRF, Argon2id), RBAC động
-> theo nhà, 438 test đạt với Postgres bắt buộc. **Chưa** có web UI, 3D, Home Assistant, thiết bị thật; Argon2id chưa đo trên
-> máy đích. Docker build và runtime đã kiểm trong CI. Việc tiếp theo: **Sprint 2 (P0-08 WebSocket, P0-09 Home Assistant)**.
+> theo nhà, 444 test đạt với Postgres bắt buộc. **Chưa** có web UI, 3D, Home Assistant, thiết bị thật; Argon2id chưa đo trên
+> máy đích. Docker build và runtime đã kiểm trong CI và trên máy dev. Việc tiếp theo: **Sprint 2 (P0-08 WebSocket, P0-09 Home Assistant)**.
 
 ## 1. Executive Summary
 
@@ -57,7 +57,7 @@ timeline
 | `72ee113` | 188 | `███████████████████████████` | ✅ success |
 
 *Hình 4. 0 test lỗi, 0 bỏ qua trên CI ở mọi commit. Từ `72ee113` gồm cả 52–53 test tài liệu. Nguồn: `python -m pytest -q`
-trên máy và log của `gh run view`. Số test hiện tại (438, gồm 83 test tài liệu) và kết quả render Mermaid: xem IMPLEMENTATION_LOG.*
+trên máy và log của `gh run view`. Số test hiện tại (444, gồm 83 test tài liệu) và kết quả render Mermaid: xem IMPLEMENTATION_LOG.*
 
 ### Rủi ro
 
