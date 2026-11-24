@@ -8,15 +8,27 @@ request read the same low count and all of them got a password guess.
 """
 
 import asyncio
+from collections.abc import Iterator
 
 import pytest
 from auth_helpers import OWNER_EMAIL, OWNER_PASSWORD, Stack, run
 
+from smarthome.auth import passwords
 from smarthome.auth.service import AuthService, InvalidCredentialsError, TooManyAttemptsError
 from smarthome.auth.store import PostgresAuthStore
 
 ATTEMPTS = 20
 EMAIL_LIMIT = 5  # SMARTHOME_LOGIN_MAX_FAILURES_EMAIL default
+
+
+@pytest.fixture(autouse=True)
+def roomy_hasher() -> Iterator[None]:
+    """These tests measure the per-email/IP limiter alone, with up to 40 requests at once. Give
+    the hasher a queue that holds them all; its own limit is tested in test_argon2_concurrency."""
+    saved = passwords.limits()
+    passwords.configure(max_concurrent=4, max_pending=64, wait_s=60.0)
+    yield
+    passwords.configure(**saved)  # type: ignore[arg-type]
 
 
 async def _burst(

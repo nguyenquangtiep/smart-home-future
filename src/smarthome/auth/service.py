@@ -92,7 +92,7 @@ class AuthService:
         usable = user is not None and user.password_hash is not None and user.disabled_at is None
         # Always spend one hash verification, on a dummy when there is nothing to check.
         stored = user.password_hash if (usable and user and user.password_hash) else None
-        ok = await passwords.verify_password(stored or passwords.dummy_hash(), password)
+        ok = await self._verify(attempt_id, digest, ip, now, None, stored, password)
         if not (usable and ok and user):
             reason = (
                 "unknown_user"
@@ -143,6 +143,24 @@ class AuthService:
             raise TooManyAttemptsError(max(1, int(slot.retry_after.total_seconds()) + 1))
         return slot.attempt_id
 
+    async def _verify(
+        self,
+        attempt_id: int,
+        digest: bytes,
+        ip: str | None,
+        now: datetime,
+        user_id: str | None,
+        stored: str | None,
+        password: str,
+    ) -> bool:
+        """Verify against ``stored`` (or the dummy hash). If the hasher is saturated (R3), give
+        the reserved slot back so a busy answer never counts against the user, then re-raise."""
+        try:
+            return await passwords.verify_password(stored or passwords.dummy_hash(), password)
+        except passwords.HasherBusyError:
+            await self.store.release_attempt(attempt_id, now, user_id, digest, ip)
+            raise
+
     # ---- sessions ------------------------------------------------------------------------
 
     async def _session_for(self, token: str) -> SessionRow | None:
@@ -185,7 +203,9 @@ class AuthService:
         attempt_id = await self._reserve(digest, ip, now, principal.user_id)
         user = await self.store.get_user(principal.user_id)
         stored = user.password_hash if user else None
-        ok = await passwords.verify_password(stored or passwords.dummy_hash(), current_password)
+        ok = await self._verify(
+            attempt_id, digest, ip, now, principal.user_id, stored, current_password
+        )
         if not (user and stored and ok):
             await self.store.finish_attempt(
                 attempt_id, False, now, principal.user_id, "login_failed", digest, ip,

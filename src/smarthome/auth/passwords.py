@@ -2,12 +2,19 @@
 
 Hashing and verification are CPU and memory heavy (about 100 ms, 64 MiB), so they always run in
 a worker thread: with one worker process (ADR 0001) a blocked event loop would also block device
-control. The common-password list is generated from base words and the usual suffixes; it is a
+control. At most ``max_concurrent`` of them run at once (each needs ~64 MiB): F2's per-email and
+per-IP limits do not bound the total when many different emails arrive together (R3). A caller
+that cannot get a slot within ``wait_s``, or arrives when ``max_pending`` callers are already
+in flight or waiting, gets HasherBusyError at once instead of joining an unbounded queue. The
+limit is per process, which is the whole deployment (one worker, one instance: ADR 0001).
+The common-password list is generated from base words and the usual suffixes; it is a
 guard against the obvious choices, not a breach corpus.
 """
 
 import asyncio
+import threading
 import unicodedata
+from collections.abc import Callable
 from functools import lru_cache
 
 from argon2 import PasswordHasher
@@ -17,6 +24,59 @@ MIN_LENGTH = 12
 MAX_LENGTH = 128
 
 _HASHER = PasswordHasher(time_cost=3, memory_cost=64 * 1024, parallelism=2)
+
+
+class HasherBusyError(RuntimeError):
+    """Too many password hashes are running or waiting; try again shortly. Says nothing about
+    the account, so it is safe to return for any email."""
+
+    def __init__(self) -> None:
+        super().__init__("password hashing is busy")
+
+
+_limits = {"max_concurrent": 2, "max_pending": 16, "wait_s": 5.0}
+_slots = threading.BoundedSemaphore(2)
+_gate = threading.Lock()
+_pending = 0
+
+
+def configure(max_concurrent: int, max_pending: int, wait_s: float) -> None:
+    """Set the process-wide limits (called once at startup from Settings)."""
+    global _slots
+    if max_concurrent < 1 or max_pending < max_concurrent or wait_s <= 0:
+        raise ValueError("need max_concurrent >= 1, max_pending >= max_concurrent, wait_s > 0")
+    with _gate:
+        _limits.update(max_concurrent=max_concurrent, max_pending=max_pending, wait_s=wait_s)
+        _slots = threading.BoundedSemaphore(max_concurrent)
+
+
+def limits() -> dict[str, float]:
+    return dict(_limits)
+
+
+def _bounded(fn: Callable[..., object], slots: threading.BoundedSemaphore, *args: str) -> object:
+    """Runs in a worker thread: wait for a slot (bounded), then hash."""
+    if not slots.acquire(timeout=_limits["wait_s"]):
+        raise HasherBusyError
+    try:
+        return fn(*args)
+    finally:
+        slots.release()
+
+
+async def _run(fn: Callable[..., object], *args: str) -> object:
+    global _pending
+    with _gate:
+        if _pending >= _limits["max_pending"]:
+            raise HasherBusyError
+        _pending += 1
+        slots = _slots
+    try:
+        return await asyncio.to_thread(_bounded, fn, slots, *args)
+    finally:
+        with _gate:
+            _pending -= 1
+
 
 _BASES_TEXT = (
     "password passw0rd p4ssword pa55word qwerty qwertyuiop asdfgh asdfghjkl "
@@ -115,11 +175,13 @@ def _verify(stored_hash: str, password: str) -> bool:
 
 
 async def hash_password(password: str) -> str:
-    return await asyncio.to_thread(_hash, password)
+    """Raises HasherBusyError when the hashing capacity is exhausted."""
+    return await _run(_hash, password)  # type: ignore[return-value]
 
 
 async def verify_password(stored_hash: str, password: str) -> bool:
-    return await asyncio.to_thread(_verify, stored_hash, password)
+    """Raises HasherBusyError when the hashing capacity is exhausted."""
+    return await _run(_verify, stored_hash, password)  # type: ignore[return-value]
 
 
 @lru_cache(maxsize=1)

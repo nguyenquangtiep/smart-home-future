@@ -97,3 +97,13 @@ def test_strict_app_hides_docs_and_simulator_route() -> None:
     for hidden in ("/docs", "/redoc", "/openapi.json"):
         assert hidden not in served
     assert app.openapi_url is None
+
+
+def test_argon2_limits_are_validated() -> None:
+    """R3: the hasher capacity must be positive and the queue at least as large as the pool."""
+    assert make(environment="test").argon2_max_concurrent == 2
+    with pytest.raises(ConfigError, match="ARGON2_MAX_PENDING"):
+        make(environment="test", argon2_max_concurrent=4, argon2_max_pending=2)
+    for bad in ({"argon2_max_concurrent": 0}, {"argon2_wait_s": 0}):
+        with pytest.raises(ValidationError):
+            make(environment="test", **bad)

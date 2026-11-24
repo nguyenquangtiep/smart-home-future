@@ -1,5 +1,6 @@
 """FastAPI application entry point: ``uvicorn smarthome.api.main:app``."""
 
+import asyncio
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -12,6 +13,7 @@ from smarthome import __version__
 from smarthome.api.deps import get_graph
 from smarthome.api.routes import agent, auth, health, homes, members, simulator
 from smarthome.api.security import authenticate_request
+from smarthome.auth import passwords
 from smarthome.auth.service import AuthService
 from smarthome.auth.store import PostgresAuthStore
 from smarthome.bootstrap import build_control, load_configs, open_config_store
@@ -45,6 +47,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_graph()  # compile once at startup
+        passwords.configure(
+            settings.argon2_max_concurrent, settings.argon2_max_pending, settings.argon2_wait_s
+        )
+        # Compute the dummy hash now, in a thread, not inside the first login on the event loop.
+        await asyncio.to_thread(passwords.dummy_hash)
         store = await open_store(settings)
         config_store = await open_config_store(settings)
         auth_store: PostgresAuthStore | None = None
@@ -82,6 +89,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/openapi.json" if settings.permissive else None,
     )
     app.state.settings = settings
+
+    @app.exception_handler(passwords.HasherBusyError)
+    async def hasher_busy(request: Request, exc: passwords.HasherBusyError) -> Response:
+        # Same answer for every email and route: reveals nothing about accounts (R3).
+        return UTF8JSONResponse(
+            status_code=503,
+            content={"detail": {"code": "AUTH_BUSY", "message": "Hệ thống đang bận, thử lại sau."}},
+            headers={"Retry-After": "1"},
+        )
+
     app.state.auth = None  # set at startup when a database is configured
     if settings.trusted_proxy_ips:
         # Honour X-Forwarded-For/-Proto only from these proxies; nothing else reads them.

@@ -427,6 +427,22 @@ class PostgresAuthStore:
 
         return await self._pg.run(tx)
 
+    async def release_attempt(
+        self,
+        attempt_id: int,
+        now: datetime,
+        user_id: str | None,
+        email_hash: bytes,
+        ip: str | None,
+    ) -> None:
+        """Undo a reservation whose password was never checked (hasher busy, R3)."""
+
+        def tx(conn: Conn) -> None:
+            conn.execute("DELETE FROM login_attempts WHERE id = %s", (attempt_id,))
+            _event(conn, now, "login_busy", user_id, None, email_hash=email_hash.hex(), ip=ip)
+
+        await self._pg.run(tx)
+
     async def finish_attempt(
         self,
         attempt_id: int,
