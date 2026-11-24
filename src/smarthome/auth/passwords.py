@@ -7,6 +7,8 @@ per-IP limits do not bound the total when many different emails arrive together 
 that cannot get a slot within ``wait_s``, or arrives when ``max_pending`` callers are already
 in flight or waiting, gets HasherBusyError at once instead of joining an unbounded queue. The
 limit is per process, which is the whole deployment (one worker, one instance: ADR 0001).
+Capacity follows the worker thread, not the awaiting coroutine, so cancelling a caller never
+frees capacity early (R4).
 The common-password list is generated from base words and the usual suffixes; it is a
 guard against the obvious choices, not a breach corpus.
 """
@@ -15,6 +17,7 @@ import asyncio
 import threading
 import unicodedata
 from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from functools import lru_cache
 
 from argon2 import PasswordHasher
@@ -35,47 +38,106 @@ class HasherBusyError(RuntimeError):
 
 
 _limits = {"max_concurrent": 2, "max_pending": 16, "wait_s": 5.0}
-_slots = threading.BoundedSemaphore(2)
 _gate = threading.Lock()
+_slots = threading.BoundedSemaphore(2)
+# Workers that may be waiting for a slot are threads of this pool, sized to max_pending, so
+# hashing never occupies the event loop's default executor and never queues beyond the limit.
+_pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="argon2")
+# Jobs submitted and not yet finished (queued, waiting for a slot, or hashing). Decremented
+# only when the *worker* is done (or was cancelled before it started), never when the awaiting
+# coroutine gives up: a cancelled caller does not end its thread (R4).
 _pending = 0
+_waiting = 0
+_running = 0
 
 
 def configure(max_concurrent: int, max_pending: int, wait_s: float) -> None:
     """Set the process-wide limits (called once at startup from Settings)."""
-    global _slots
+    global _slots, _pool
     if max_concurrent < 1 or max_pending < max_concurrent or wait_s <= 0:
         raise ValueError("need max_concurrent >= 1, max_pending >= max_concurrent, wait_s > 0")
     with _gate:
         _limits.update(max_concurrent=max_concurrent, max_pending=max_pending, wait_s=wait_s)
         _slots = threading.BoundedSemaphore(max_concurrent)
+        old, _pool = _pool, ThreadPoolExecutor(max_pending, thread_name_prefix="argon2")
+    old.shutdown(wait=False)  # jobs already submitted finish and release what they hold
 
 
 def limits() -> dict[str, float]:
     return dict(_limits)
 
 
-def _bounded(fn: Callable[..., object], slots: threading.BoundedSemaphore, *args: str) -> object:
-    """Runs in a worker thread: wait for a slot (bounded), then hash."""
-    if not slots.acquire(timeout=_limits["wait_s"]):
+def stats() -> dict[str, int]:
+    """Current occupancy, for tests and diagnostics."""
+    with _gate:
+        return {"pending": _pending, "waiting": _waiting, "running": _running}
+
+
+def _count(name: str, delta: int) -> None:
+    globals()[name] += delta  # always called with _gate held
+
+
+def _bounded(
+    fn: Callable[..., object],
+    slots: threading.BoundedSemaphore,
+    abandoned: threading.Event,
+    *args: str,
+) -> object:
+    """Runs in a worker thread: wait for a slot (bounded), then hash unless the caller left."""
+    with _gate:
+        _count("_waiting", 1)
+    try:
+        got = slots.acquire(timeout=_limits["wait_s"])
+    finally:
+        with _gate:
+            _count("_waiting", -1)
+    if not got:
         raise HasherBusyError
     try:
-        return fn(*args)
+        if abandoned.is_set():
+            return None  # nobody will read the result: skip the 64 MiB, ~100 ms hash
+        with _gate:
+            _count("_running", 1)
+        try:
+            return fn(*args)
+        finally:
+            with _gate:
+                _count("_running", -1)
     finally:
         slots.release()
 
 
+def _job_done(_future: Future[object]) -> None:
+    """Called exactly once per job: when its worker returns or raises, or when the job is
+    cancelled before a worker picked it up."""
+    global _pending
+    with _gate:
+        _pending -= 1
+
+
 async def _run(fn: Callable[..., object], *args: str) -> object:
     global _pending
+    abandoned = threading.Event()
     with _gate:
         if _pending >= _limits["max_pending"]:
             raise HasherBusyError
         _pending += 1
-        slots = _slots
+        slots, pool = _slots, _pool
     try:
-        return await asyncio.to_thread(_bounded, fn, slots, *args)
-    finally:
+        job = pool.submit(_bounded, fn, slots, abandoned, *args)
+    except BaseException:
         with _gate:
             _pending -= 1
+        raise
+    job.add_done_callback(_job_done)
+    try:
+        return await asyncio.wrap_future(job)
+    except asyncio.CancelledError:
+        # wrap_future already tried job.cancel(): that succeeds only if no worker started it
+        # (then _job_done ran). Otherwise the worker keeps its capacity until it ends; tell it
+        # not to hash if it has not started hashing yet.
+        abandoned.set()
+        raise
 
 
 _BASES_TEXT = (
