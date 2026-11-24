@@ -5,6 +5,10 @@
 
 ## 1. Bối cảnh (có dẫn chứng)
 
+> Hiện trạng **trước Sprint 1** (lý do ra quyết định), giữ nguyên để tra cứu. Mọi điểm dưới đây đã được sửa trong Sprint 1:
+> xem [SPRINT1_ACCEPTANCE](../SPRINT1_ACCEPTANCE.md).
+
+
 - Chỉ có danh tính dev qua header `X-Dev-User`, mặc định tắt (`api/identity.py`).
 - Cổng môi trường fail-open: chỉ so `environment == "production"` đúng chữ; `environment` là chuỗi tự do, mặc định `local`
   (`api/main.py`, `core/config.py`). Compose hiện đặt `docker`, tức đã nằm ngoài cổng.

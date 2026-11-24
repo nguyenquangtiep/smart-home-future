@@ -4,8 +4,9 @@
 
 ## Bối cảnh
 
-- `docker-compose.yml` chỉ có service `api`, không có Postgres, không có bước migrate, đặt `SMARTHOME_ENVIRONMENT=docker` → chạy
-  bằng Docker thì lệnh và audit **không bền**. (Finding DR-H04.)
+- `docker-compose.yml` chỉ dành cho phát triển: service `api`, `SMARTHOME_ENVIRONMENT=local`, publish `127.0.0.1:8000`, không có
+  Postgres, migrate, proxy → chạy bằng Compose thì lệnh và audit **không bền** (Finding DR-H04). Image mặc định `production` và
+  fail-closed khi thiếu Postgres. (Trước Sprint 1 Compose đặt `docker`, giá trị nay bị từ chối.)
 - Build Docker và chạy image với PostgreSQL được kiểm trong CI (`scripts/docker_smoke.sh`, từ 2026-11-24); topology đầy đủ của ADR này chưa kiểm.
 - Xác minh `state_match` cần đồng hồ chính xác (ADR 0003). Cookie `Secure` cần HTTPS (ADR 0005).
 
