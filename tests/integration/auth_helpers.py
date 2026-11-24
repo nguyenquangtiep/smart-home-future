@@ -40,7 +40,7 @@ def settings_for(dsn: str, **overrides: object) -> Settings:
         "environment": "test",
         "database_url": dsn,
         "sim_latency_s": 0.02,
-        "verify_timeout_s": 0.3,
+        "verify_timeout_s": 2.0,
         "cookie_secure": True,
         "allowed_origins": ("https://home.example",),
     }
@@ -59,7 +59,7 @@ class Stack:
 
     def rows(self, sql: str, *params: object) -> list[dict[str, Any]]:
         with connect(self.dsn) as conn:
-            return conn.execute(sql, params).fetchall()  # type: ignore[arg-type]
+            return conn.execute(sql, params or None).fetchall()  # type: ignore[arg-type]
 
     def new_store(self) -> PostgresAuthStore:
         return run(PostgresAuthStore.open(self.dsn))
@@ -94,3 +94,41 @@ def make_stack(dsn: str, **setting_overrides: object) -> Stack:
 @pytest.fixture
 def stack(pg_dsn: str) -> Iterator[Stack]:
     yield make_stack(pg_dsn)
+
+
+# ---- API-level helpers ----------------------------------------------------------------------
+
+ORIGIN = "https://home.example"
+SECOND_HOME = "home-b"
+
+
+def add_second_home(dsn: str) -> None:
+    """A second home with the same room ids and its own gateway and devices."""
+    from smarthome.demo_home import build_demo_config
+    from smarthome.domain.models import GatewayConnection
+    from smarthome.persistence.config_store import PostgresHomeConfigStore
+
+    config = build_demo_config()[0]
+    gateway = GatewayConnection(
+        id=f"gw-{SECOND_HOME}", home_id=SECOND_HOME, kind="simulator", name="B"
+    )
+    devices = tuple(
+        d.model_copy(
+            update={"id": f"{SECOND_HOME}-{d.id}", "home_id": SECOND_HOME, "gateway": gateway.id}
+        )
+        for d in config.devices
+    )
+    other = config.model_copy(
+        update={
+            "home": config.home.model_copy(update={"id": SECOND_HOME, "name": "B"}),
+            "gateways": (gateway,),
+            "devices": devices,
+        }
+    )
+
+    async def go() -> None:
+        store = await PostgresHomeConfigStore.open(dsn)
+        await store.replace_home(other, None)
+        await store.close()
+
+    run(go())

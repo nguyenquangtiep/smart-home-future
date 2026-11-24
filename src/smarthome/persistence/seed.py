@@ -5,8 +5,10 @@ The command takes the instance lock first, so it cannot run while the applicatio
 outside local/test so simulated data never reaches a real deployment.
 """
 
+from smarthome.auth.store import PostgresAuthStore
 from smarthome.core.config import Settings
 from smarthome.demo_home import HOME_ID, build_demo_config
+from smarthome.domain.state import utc_now
 from smarthome.persistence.config_store import PostgresHomeConfigStore
 from smarthome.persistence.postgres import PostgresCommandStore
 
@@ -29,13 +31,16 @@ async def seed_demo(settings: Settings) -> str:
     try:
         await lock.acquire_instance_lock()  # raises InstanceLockError while the app runs
         config_store = await PostgresHomeConfigStore.open(dsn)
+        auth_store = await PostgresAuthStore.open(dsn)
         try:
-            if any(c.home.id == HOME_ID for c in await config_store.load_all()):
-                return "exists"
-            config, _members = build_demo_config()
-            await config_store.replace_home(config, None)
-            return "created"
+            config, members = build_demo_config()
+            exists = any(c.home.id == HOME_ID for c in await config_store.load_all())
+            if not exists:
+                await config_store.replace_home(config, None)
+            await auth_store.seed_demo_users(members, utc_now())
+            return "exists" if exists else "created"
         finally:
+            await auth_store.close()
             await config_store.close()
     finally:
         await lock.close()

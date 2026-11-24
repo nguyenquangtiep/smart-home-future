@@ -180,6 +180,31 @@ class PostgresAuthStore:
 
         return await self._pg.run(tx)
 
+    async def seed_demo_users(self, members: list[Member], now: datetime) -> int:
+        """Demo members get a user row with no password (they sign in through the dev identity
+        in local/test only) and a membership. Idempotent. Returns how many were created."""
+
+        def tx(conn: Conn) -> int:
+            created = 0
+            for m in members:
+                email = f"{m.user_id}@demo.invalid"
+                made = conn.execute(
+                    "INSERT INTO users (id, email, display_name) VALUES (%s, %s, %s)"
+                    " ON CONFLICT DO NOTHING RETURNING id",
+                    (m.user_id, email, m.display_name),
+                ).fetchone()
+                conn.execute(
+                    "INSERT INTO memberships (home_id, user_id, role, created_by)"
+                    " VALUES (%s, %s, %s, 'seed-demo') ON CONFLICT DO NOTHING",
+                    (m.home_id, m.user_id, m.role.value),
+                )
+                created += 1 if made else 0
+            if created:
+                _event(conn, now, "demo_users_seeded", None, members[0].home_id, count=created)
+            return created
+
+        return await self._pg.run(tx)
+
     async def set_password(self, email: str, password_hash: str, now: datetime) -> str:
         """CLI: set a new password and revoke every session of the user."""
 

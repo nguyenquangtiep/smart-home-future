@@ -89,8 +89,11 @@ def test_docs_and_simulator_route_exist_only_in_permissive_environments(
 def test_strict_app_hides_docs_and_simulator_route() -> None:
     settings = make(environment="staging", **STRICT)
     app = create_app(settings)  # no lifespan: no database is contacted
-    paths = {getattr(r, "path", "") for r in app.routes}
+    # FastAPI wraps included routers lazily; the schema lists every real route.
+    paths = set(app.openapi()["paths"])
+    assert "/api/v1/homes/{home_id}/commands" in paths  # the schema does see the real routes
     assert not any("/simulator/" in p for p in paths)
+    served = {getattr(r, "path", "") for r in app.routes}
     for hidden in ("/docs", "/redoc", "/openapi.json"):
-        assert hidden not in paths
+        assert hidden not in served
     assert app.openapi_url is None

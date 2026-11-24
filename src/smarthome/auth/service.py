@@ -72,6 +72,9 @@ class AuthService:
         self.settings = settings
         self._clock = clock
 
+    def now(self) -> datetime:
+        return self._clock()
+
     # ---- login ---------------------------------------------------------------------------
 
     async def login(

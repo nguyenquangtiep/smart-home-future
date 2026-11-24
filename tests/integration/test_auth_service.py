@@ -31,6 +31,9 @@ from smarthome.persistence import migrate
 from smarthome.persistence.postgres import connect
 
 IP = "203.0.113.7"
+# seed-demo also creates three password-less demo users; real accounts are the others.
+REAL_USERS = "SELECT id FROM users WHERE email NOT LIKE '%@demo.invalid'"
+REAL_MEMBERSHIPS = "SELECT user_id FROM memberships WHERE created_by IS DISTINCT FROM 'seed-demo'"
 
 
 # ---- migration 0003 -------------------------------------------------------------------------
@@ -68,7 +71,7 @@ def test_email_is_unique_ignoring_case(stack: Stack) -> None:
     stack.create_user("Mixed.Case@Example.com")
     with pytest.raises(EmailInUseError):
         stack.create_user("mixed.case@example.com")
-    assert len(stack.rows("SELECT id FROM users")) == 1
+    assert len(stack.rows(REAL_USERS)) == 1
 
 
 # ---- CLI ------------------------------------------------------------------------------------
@@ -97,7 +100,7 @@ def test_cli_rejects_password_on_the_command_line(
             "--password", "secret-secret-1")  # fmt: skip
     assert excinfo.value.code == 2
     assert "never accepted as arguments" in capsys.readouterr().err
-    assert cli_env.rows("SELECT id FROM users") == []
+    assert cli_env.rows(REAL_USERS) == []
 
 
 def test_cli_create_owner_for_missing_home_creates_nothing(
@@ -107,8 +110,8 @@ def test_cli_create_owner_for_missing_home_creates_nothing(
                "--password-stdin", stdin="a-long-unusual-passphrase\n")  # fmt: skip
     assert code == 2
     assert "does not exist" in capsys.readouterr().err
-    assert cli_env.rows("SELECT id FROM users") == []
-    assert cli_env.rows("SELECT user_id FROM memberships") == []
+    assert cli_env.rows(REAL_USERS) == []
+    assert cli_env.rows(REAL_MEMBERSHIPS) == []
 
 
 def test_cli_create_owner_makes_user_and_membership_together(
@@ -120,14 +123,14 @@ def test_cli_create_owner_makes_user_and_membership_together(
     assert code == 0
     out = capsys.readouterr()
     assert secret not in out.out + out.err
-    (member,) = cli_env.rows("SELECT role, home_id FROM memberships")
+    (member,) = cli_env.rows("SELECT role, home_id FROM memberships WHERE created_by = 'cli'")
     assert (member["role"], member["home_id"]) == ("owner", "home-demo")
-    (user,) = cli_env.rows("SELECT password_hash FROM users")
+    (user,) = cli_env.rows("SELECT password_hash FROM users WHERE password_hash IS NOT NULL")
     assert user["password_hash"].startswith("$argon2id$")
     assert secret not in str(cli_env.rows("SELECT * FROM auth_events"))
     assert cli("create-owner", "--home", "home-demo", "--email", "BOSS@example.com",
                "--name", "Dup", "--password-stdin", stdin=secret + "\n") == 2  # fmt: skip
-    assert len(cli_env.rows("SELECT id FROM users")) == 1
+    assert len(cli_env.rows(REAL_USERS)) == 1
 
 
 def test_cli_prompt_mismatch_and_weak_passwords_are_refused(
@@ -138,7 +141,7 @@ def test_cli_prompt_mismatch_and_weak_passwords_are_refused(
     assert "differ" in capsys.readouterr().err
     assert cli(*args, "--password-stdin", stdin="password1234\n") == 2
     assert "phổ biến" in capsys.readouterr().err
-    assert cli_env.rows("SELECT id FROM users") == []
+    assert cli_env.rows(REAL_USERS) == []
     assert cli(*args, prompts=["a-long-unusual-passphrase"] * 2) == 0
 
 
@@ -194,7 +197,7 @@ def test_login_stores_only_the_hash_of_the_token(stack: Stack) -> None:
     assert result.token not in str(row) and result.token != result.csrf_token
     assert len(result.token) >= 43  # 256 bits, url-safe base64
     assert row["csrf_token"] == result.csrf_token
-    (user,) = stack.rows("SELECT password_hash FROM users")
+    (user,) = stack.rows("SELECT password_hash FROM users WHERE password_hash IS NOT NULL")
     assert user["password_hash"].startswith("$argon2id$")
     everything = (
         str(stack.rows("SELECT * FROM auth_events"))
@@ -480,7 +483,8 @@ def test_store_rejects_changes_to_unknown_things(stack: Stack) -> None:
     with pytest.raises(MemberNotFoundError):
         run(store.change_role("home-demo", "ghost", Role.GUEST, "x", stack.clock()))
     stack.create_user()
-    (owner,) = stack.rows("SELECT user_id FROM memberships")
+    (owner,) = stack.rows(REAL_MEMBERSHIPS)
+    run(store.remove_member("home-demo", "user-owner", "x", stack.clock()))  # the demo owner
     with pytest.raises(LastOwnerError):
         run(store.remove_member("home-demo", owner["user_id"], "x", stack.clock()))
     assert email_digest(" Owner@Example.COM ") == email_digest(OWNER_EMAIL)
