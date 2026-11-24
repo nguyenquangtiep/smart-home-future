@@ -1,19 +1,18 @@
 # Database Design
 
-> **Tóm tắt.** Ba bảng đã chạy thật trên Postgres (`commands`, `idempotency_keys`, `audit_events`) qua migration `0001`. Cấu hình
-> nhà (`0002`) và đăng nhập (`0003`) có **thiết kế đã chốt** ở hai LLD, DDL đã thử trên Postgres 18 nhưng **chưa là migration**.
-> Trạng thái thiết bị cố ý không lưu (cache).
+> **Tóm tắt.** Mười bốn bảng chạy thật trên Postgres qua ba migration: `0001` (lệnh, idempotency, audit), `0002` (cấu hình nhà),
+> `0003` (đăng nhập). Trạng thái thiết bị cố ý không lưu (cache).
 
-**Trạng thái (2026-11-23):** **IMPLEMENTED** cho `commands`, `idempotency_keys`, `audit_events` (migration
-`0001_commands_audit`, `src/smarthome/persistence/`). **DESIGNED** cho cấu hình nhà ([LLD P0-06](lld/P0-06_PERSISTENCE.md)) và
-đăng nhập ([LLD P0-07](lld/P0-07_AUTH_RBAC.md)), theo [ADR 0006](adr/0006-home-configuration-source-of-truth.md)
-và [ADR 0005](adr/0005-session-auth-csrf.md) (cả hai **Accepted** 2026-11-23, chưa triển khai); hiện cấu hình nhà lấy từ `src/smarthome/demo_home.py`. Migration là file SQL có phiên
-bản chạy bằng runner riêng (`python -m smarthome.persistence`), **không dùng Alembic**
-([ADR 0002](adr/0002-postgresql-versioned-sql-migrations.md)). Trạng thái thiết bị là cache, nguồn đúng là gateway.
+**Trạng thái (2026-11-24):** **IMPLEMENTED** cho cả ba migration (`src/smarthome/persistence/migrations/`, runner
+`python -m smarthome.persistence`), có test trên PostgreSQL thật: xem [SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md). Thiết kế ở
+[LLD P0-06](lld/P0-06_PERSISTENCE.md), [LLD P0-07](lld/P0-07_AUTH_RBAC.md), [ADR 0006](adr/0006-home-configuration-source-of-truth.md)
+và [ADR 0005](adr/0005-session-auth-csrf.md). Có `SMARTHOME_DATABASE_URL` thì **cấu hình nhà lấy từ DB**; không có (chỉ `local`/`test`)
+thì nhà mẫu `src/smarthome/demo_home.py` nằm trong bộ nhớ. Migration là file SQL có phiên bản chạy bằng runner riêng, **không dùng
+Alembic** ([ADR 0002](adr/0002-postgresql-versioned-sql-migrations.md)). Trạng thái thiết bị là cache, nguồn đúng là gateway.
 
 ```mermaid
 flowchart LR
-    M1["0001 · IMPLEMENTED<br/>commands, idempotency_keys,<br/>audit_events"] --> M2["0002 · DESIGNED<br/>homes, floors, rooms,<br/>gateway_connections,<br/>devices, device_placements"] --> M3["0003 · DESIGNED<br/>users, memberships, sessions,<br/>login_attempts, auth_events"]
+    M1["0001 · IMPLEMENTED<br/>commands, idempotency_keys,<br/>audit_events"] --> M2["0002 · IMPLEMENTED<br/>homes, floors, rooms,<br/>gateway_connections,<br/>devices, device_placements"] --> M3["0003 · IMPLEMENTED<br/>users, memberships, sessions,<br/>login_attempts, auth_events"]
 ```
 *Hình 1. Thứ tự migration. Mỗi migration chỉ thêm bảng; `down` của migration sau không đụng migration trước.*
 
@@ -77,7 +76,7 @@ erDiagram
 *Hình 2. Ba bảng đang chạy (rút gọn cột). `audit_events.command_id` cố ý **không** có khóa ngoại để audit sống lâu hơn
 lệnh đã purge. Đầy đủ cột: `src/smarthome/persistence/migrations/0001_commands_audit.up.sql`.*
 
-### 2.2 Mục tiêu sau Sprint 1 (`0002`, `0003`, DESIGNED)
+### 2.2 Cấu hình nhà và đăng nhập (`0002`, `0003`, IMPLEMENTED)
 
 ```mermaid
 erDiagram
@@ -112,8 +111,8 @@ Bảng dưới là mục lục, không lặp chi tiết cột.
 | `commands` | ✅ IMPLEMENTED | `0001` | `id text`; `correlation_id`, `verification`; unique một phần: một lệnh đang gửi mỗi `(device_id, capability)` |
 | `idempotency_keys` | ✅ IMPLEMENTED | `0001` | PK `(home_id, actor_id, key)`, `fingerprint`, `expires_at` |
 | `audit_events` | ✅ IMPLEMENTED | `0001` | `seq bigserial`; trigger chặn UPDATE/DELETE trừ `purge`; `home_id NOT NULL` |
-| `homes`, `floors`, `rooms`, `gateway_connections`, `devices`, `device_placements` | 📐 DESIGNED | `0002` · P0-06b | Khóa ngoại tổng hợp; `homes.config_version`; `devices.removed_at` (xóa mềm); `gateway_connections` **chuyển từ P0-09 vào `0002`** vì `Device.gateway` cần ID instance |
-| `users`, `memberships`, `sessions`, `login_attempts`, `auth_events` | 📐 DESIGNED | `0003` · P0-07 | `users.id text`; unique `lower(email)`; `sessions` chỉ lưu SHA-256 token, có `csrf_token`; `auth_events` chỉ ghi thêm |
+| `homes`, `floors`, `rooms`, `gateway_connections`, `devices`, `device_placements` | ✅ IMPLEMENTED | `0002` · P0-06b | Khóa ngoại tổng hợp; số thực là `double precision` (không phải `real`, để đọc lại đúng giá trị đã ghi); `homes.config_version`; `devices.removed_at` (xóa mềm); `gateway_connections` **chuyển từ P0-09 vào `0002`** vì `Device.gateway` cần ID instance |
+| `users`, `memberships`, `sessions`, `login_attempts`, `auth_events` | ✅ IMPLEMENTED | `0003` · P0-07 | `users.id text`; unique `lower(email)`; `sessions` chỉ lưu SHA-256 token, có `csrf_token`; `auth_events` chỉ ghi thêm |
 | `scenes`, `scene_runs` | ❌ Chưa thiết kế chi tiết | P0-14 | |
 | `automations`, `memories`, `energy_samples` | Mức ý tưởng | P1 | |
 | ~~`device_observations`, `device_connectivity`~~ | **Không làm** | — | Trạng thái thiết bị là cache, nguồn đúng là gateway ([HARDENING §2.3](HARDENING_2026-11.md#23-persistence-và-recovery-issue-04)) |
@@ -124,11 +123,11 @@ Bảng dưới là mục lục, không lặp chi tiết cột.
 |---|---|---|
 | `CommandRecord` | `commands` | ✅ |
 | `AuditEvent` (qua `CommandStore`) | `audit_events` | ✅ |
-| `Home`, `Floor`, `Room` | `homes`, `floors`, `rooms` | 📐 |
-| `Device`, `Capability` | `devices` (`capabilities jsonb`, validate bằng chính model pydantic) | 📐 |
-| `Device.gateway` | `gateway_connections.id` (ID **instance**, không phải tên adapter) | 📐 |
-| `Placement` | `device_placements` | 📐 |
-| `Member` | `memberships`, đọc qua `MembershipSource` (thay dict tĩnh trong `ControlService`) | 📐 |
+| `Home`, `Floor`, `Room` | `homes`, `floors`, `rooms` | ✅ |
+| `Device`, `Capability` | `devices` (`capabilities jsonb`, validate bằng chính model pydantic) | ✅ |
+| `Device.gateway` | `gateway_connections.id` (ID **instance**, không phải tên adapter) | ✅ |
+| `Placement` | `device_placements` | ✅ |
+| `Member` | `memberships`, đọc qua `MembershipSource` (thay dict tĩnh trong `ControlService`) | ✅ |
 | `StateStore` | **Không lưu** (cache trong bộ nhớ) | ✅ quyết định |
 
 ## 5. Migration và khởi động lại

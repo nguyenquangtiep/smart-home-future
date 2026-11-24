@@ -1,21 +1,20 @@
 # Roadmap
 
-> **Tóm tắt.** P0: **5/18 task đạt** (28 %), 1 task đạt một phần, 12 chưa làm. Thiết kế Sprint 1 (P0-06b, P0-07) đã chốt
-> và ADR 0005, 0006 đã được chủ dự án duyệt (2026-11-23): **Sprint 1 được phép bắt đầu code**.
+> **Tóm tắt.** P0: **7/18 task đạt** (39 %), 11 chưa làm. **Sprint 1 (P0-06b, P0-07) đã có code và test** trên PostgreSQL thật
+> ([kết quả nghiệm thu](SPRINT1_ACCEPTANCE.md)). Còn mở: đo Argon2id trên máy đích, kiểm Docker. Việc tiếp theo: Sprint 2 (P0-08, P0-09).
 
-Cập nhật 2026-11-23. Task xếp theo dependency: không làm frontend trước khi có API, không làm tool AI trước khi có hợp đồng
+Cập nhật 2026-11-24. Task xếp theo dependency: không làm frontend trước khi có API, không làm tool AI trước khi có hợp đồng
 điều khiển ổn định.
 
 **Cách đo tiến độ:** đếm task có **mọi** tiêu chí nghiệm thu đạt và có test/bằng chứng. Không dùng phần trăm ước lượng.
-**P0 hiện tại: 5/18 task đạt** (P0-01 … P0-05), P0-06 đạt một phần (hardening 2026-11). Độ phức tạp: S (≤1 ngày), M (2–4 ngày), L (1–2 tuần) cho một người.
+**P0 hiện tại: 7/18 task đạt** (P0-01 … P0-07; Sprint 1 xong 2026-11-24). Độ phức tạp: S (≤1 ngày), M (2–4 ngày), L (1–2 tuần) cho một người.
 
 ## P0 — MVP dùng được trong nhà thật
 
 ```mermaid
 pie showData title Task P0 (18)
-    "Đạt" : 5
-    "Một phần" : 1
-    "Chưa làm" : 12
+    "Đạt" : 7
+    "Chưa làm" : 11
 ```
 *Hình 1. Trạng thái P0. Nguồn: cột Trạng thái trong bảng dưới; "Đạt" = mọi tiêu chí nghiệm thu có test.*
 
@@ -26,8 +25,8 @@ flowchart LR
     T01["01 Capability ✅"] --> T02["02 Policy ✅"] --> T03["03 Execution ✅"]
     T01 --> T04["04 Simulator ✅"]
     T03 --> T05["05 Control API ✅"]
-    T05 --> T06a["06a Lệnh, audit ✅"] --> T06b["06b Cấu hình nhà 📐"]
-    T06b --> T07["07 Auth/RBAC 📐"] --> T08["08 WebSocket"]
+    T05 --> T06a["06a Lệnh, audit ✅"] --> T06b["06b Cấu hình nhà ✅"]
+    T06b --> T07["07 Auth/RBAC ✅"] --> T08["08 WebSocket"]
     T03 --> T09["09 HA adapter"]
     T06b & T09 --> T10["10 Import cấu hình"]
     T07 & T08 --> T11["11 Web app"] --> T12["12 3D view"] --> T13["13 Sửa vị trí 3D"]
@@ -48,8 +47,8 @@ P0-17 cần 07 và 16. ✅ đạt · 📐 có LLD.*
 | P0-03 | Execution Engine v1: vòng đời, xác minh, xác nhận, chống trùng, audit | `control/execution.py` | 01, 02 | Cao nhất | M | **Đạt** (hardening 2026-11) |
 | P0-04 | Simulator gateway với hành vi lỗi | `gateway/simulator.py` | 01 | Cao | S | **Đạt** |
 | P0-05 | Control API v1 (REST, dev identity) | `api/routes/homes.py` | 03 | Cao | S | **Đạt** |
-| P0-06 | Lưu bền. **06a**: lệnh, idempotency, audit. **06b**: cấu hình nhà ([LLD v2](lld/P0-06_PERSISTENCE.md)) | `persistence`, `domain` | 05; 06b: ADR 0006 | Cao nhất | L | **Một phần**: 06a Đạt, 06b 📐 LLD v2 |
-| P0-07 | Auth thật và RBAC theo nhà ([LLD v2](lld/P0-07_AUTH_RBAC.md)) | `api/identity`, `persistence`, `auth`, `control` (MembershipSource) | 06b; ADR 0005 | Cao nhất | L | 📐 LLD v2, chưa code |
+| P0-06 | Lưu bền. **06a**: lệnh, idempotency, audit. **06b**: cấu hình nhà ([LLD v2](lld/P0-06_PERSISTENCE.md)) | `persistence`, `domain` | 05; 06b: ADR 0006 | Cao nhất | L | **Đạt** (06a, 06b; AC-06-1…13 có test, [bằng chứng](SPRINT1_ACCEPTANCE.md#ac-06-persistence)) |
+| P0-07 | Auth thật và RBAC theo nhà ([LLD v2](lld/P0-07_AUTH_RBAC.md)) | `api/identity`, `persistence`, `auth`, `control` (MembershipSource) | 06b; ADR 0005 | Cao nhất | L | **Đạt** (AC-07-1…20 có test, [bằng chứng](SPRINT1_ACCEPTANCE.md#ac-07-authentication-and-rbac)); còn mở: M-07-1 trên máy đích |
 | P0-08 | WebSocket realtime theo nhà | `api` | 07; ADR 0007; **cần LLD** | Cao | M | Chưa làm |
 | P0-09 | Home Assistant gateway adapter | `gateway/home_assistant.py` | 01, 03 | Cao nhất | L | Chưa làm |
 | P0-10 | Nhập/xuất cấu hình YAML + ánh xạ entity HA | `domain`, `persistence` | 06b, 09 | Cao | M | Chưa làm |
@@ -152,7 +151,7 @@ P0-18 có số liệu.
 
 ## Sprint 1: P0-06b và P0-07 (chốt thiết kế 2026-11-23)
 
-Thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md), [LLD P0-07](lld/P0-07_AUTH_RBAC.md). Điều kiện bắt đầu code đã đạt: chủ dự án đã duyệt
+**Trạng thái: S1-01…S1-09 đã triển khai**, chi tiết từng tiêu chí ở [SPRINT1_ACCEPTANCE](SPRINT1_ACCEPTANCE.md). Thiết kế: [LLD P0-06](lld/P0-06_PERSISTENCE.md), [LLD P0-07](lld/P0-07_AUTH_RBAC.md). Điều kiện bắt đầu code đã đạt (và đã dùng): chủ dự án đã duyệt
 [ADR 0006](adr/0006-home-configuration-source-of-truth.md) và [ADR 0005](adr/0005-session-auth-csrf.md) (**Accepted** 2026-11-23).
 
 ```mermaid
@@ -191,17 +190,17 @@ flowchart LR
 
 | # | Tiêu chí |
 |---|---|
-| 1 | Toàn bộ AC-06-1…13 và AC-07-1…20 có test đạt trong CI với Postgres bắt buộc (không skip) |
-| 2 | M-07-1 (đo Argon2id trên máy đích) đã ghi kết quả |
-| 3 | DR-H03 và DR-H08 đóng bằng test; `docker compose up` chạy được ở chế độ `local` |
-| 4 | Tài liệu đồng bộ với code: DATABASE_DESIGN, ARCHITECTURE, TRACEABILITY chuyển DESIGNED → IMPLEMENTED có dẫn chứng |
-| 5 | Không ghi trạng thái "đạt" cho P0-06 hoặc P0-07 khi còn AC chưa có test |
+| 1 | ✅ Toàn bộ AC-06-1…13 và AC-07-1…20 có test đạt với Postgres bắt buộc (không skip) trên máy phát triển; CI chạy cùng cấu hình (xem Pull Request) |
+| 2 | 🟡 M-07-1 đã đo trên máy phát triển (băm 88 ms, xác minh 90 ms); **máy đích chưa đo** |
+| 3 | ✅ DR-H03 và DR-H08 đóng bằng test. ⛔ `docker compose up` **chưa kiểm** (Docker daemon không chạy); `docker compose config` hợp lệ |
+| 4 | ✅ Tài liệu đồng bộ với code: DATABASE_DESIGN, ARCHITECTURE, TRACEABILITY chuyển DESIGNED → IMPLEMENTED có dẫn chứng |
+| 5 | ✅ Mọi AC của P0-06 và P0-07 đều có test; hai mục còn mở ở trên ghi rõ, không che |
 
 ## Thứ tự sprint (theo dependency, chưa có ngày)
 
 ```mermaid
 flowchart LR
-    G0["Cổng: ADR 0005, 0006<br/>✅ đã duyệt"] --> S1["Sprint 1<br/>P0-06b, P0-07<br/>(S1-01 … S1-09)"]
+    G0["Cổng: ADR 0005, 0006<br/>✅ đã duyệt"] --> S1["Sprint 1<br/>P0-06b, P0-07<br/>✅ đã triển khai"]
     S1 --> D2["Cổng: LLD P0-08,<br/>HA của chủ nhà"] --> S2["Sprint 2<br/>P0-08, P0-09"]
     S2 --> S3["Sprint 3<br/>P0-10, P0-16, P0-17"]
     S3 --> D4["Cổng: LLD P0-14, P0-15"] --> S4["Sprint 4<br/>P0-11 … P0-15"]
@@ -214,6 +213,7 @@ có lịch thật.*
 
 1. ✅ Chủ dự án đã duyệt D1–D6 của [ADR 0005](adr/0005-session-auth-csrf.md#6-quyết-định-cần-chủ-dự-án) và
    [ADR 0006](adr/0006-home-configuration-source-of-truth.md#5-quyết-định-cần-chủ-dự-án) theo khuyến nghị (2026-11-23).
-2. Bắt đầu Sprint 1: S1-01, S1-02, S1-05 song song, rồi theo [dependency Sprint 1](#sprint-1-p0-06b-và-p0-07-chốt-thiết-kế-2026-11-23).
-4. Song song khi có quyền truy cập HA của nhà pilot: chuẩn bị P0-09 theo [ADR 0004](adr/0004-home-assistant-integration-layer.md).
+2. ✅ Sprint 1 đã triển khai ([nghiệm thu](SPRINT1_ACCEPTANCE.md)).
+3. Còn mở từ Sprint 1: đo Argon2id trên máy đích (M-07-1); build và chạy Docker Compose trên máy có Docker daemon.
+4. Trước Sprint 2: viết LLD P0-08 (WebSocket) và có quyền truy cập Home Assistant của nhà pilot (P0-09, [ADR 0004](adr/0004-home-assistant-integration-layer.md)).
 5. Chủ dự án cần cung cấp: danh sách thiết bị pilot, HA đã cài chưa, máy chạy backend trong nhà.

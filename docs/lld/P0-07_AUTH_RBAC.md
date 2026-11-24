@@ -2,9 +2,9 @@
 
 > **Tóm tắt (v2, 2026-11-23).** Thay danh tính dev bằng đăng nhập thật: session phía server, cookie HttpOnly, CSRF, mật khẩu
 > Argon2id, membership theo nhà, sự kiện bảo mật chỉ ghi thêm. v2 sửa 6 lỗi của v1 (mục 1). Theo
-> [ADR 0005](../adr/0005-session-auth-csrf.md) (**Accepted** 2026-11-23, chưa triển khai). Phụ thuộc
-> [P0-06b](P0-06_PERSISTENCE.md) (khóa ngoại `memberships → homes`). **Chưa triển khai; DDL dưới đây là thiết kế, chưa phải
-> migration.**
+> [ADR 0005](../adr/0005-session-auth-csrf.md) (**Accepted** 2026-11-23, đã triển khai). Phụ thuộc
+> [P0-06b](P0-06_PERSISTENCE.md) (khóa ngoại `memberships → homes`). **Đã triển khai (2026-11-24) bằng migration `0003`; bằng chứng:
+> [SPRINT1_ACCEPTANCE](../SPRINT1_ACCEPTANCE.md#ac-07-authentication-and-rbac). Quyết định khi triển khai: `POST /auth/logout` nằm trong allowlist của default-deny (không có phiên vẫn trả `204`).**
 
 ```mermaid
 flowchart LR

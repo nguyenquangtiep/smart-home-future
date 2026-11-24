@@ -3,7 +3,7 @@
 > **Tóm tắt.** Hiện có Dockerfile (non-root, 1 worker, healthcheck) và `docker-compose.yml` **chỉ có app**: chạy bằng
 > Compose thì lệnh và audit nằm trong bộ nhớ. Thiết kế mục tiêu ([ADR 0008](adr/0008-local-deployment-topology.md),
 > Proposed): một máy trong LAN, Compose gồm proxy TLS + app + Postgres + bước migrate, truy cập từ xa qua VPN, NTP bật.
-> **Chưa có môi trường triển khai nào; build Docker chưa kiểm lại gần đây.**
+> Image đặt `SMARTHOME_ENVIRONMENT=production` nên **không chạy được nếu thiếu Postgres và `SMARTHOME_ALLOWED_ORIGINS`** (fail-closed); Compose dev đặt `local` và chỉ bind `127.0.0.1`. **Chưa có môi trường triển khai nào; build Docker chưa kiểm** (daemon không chạy lúc triển khai Sprint 1; `docker compose config` hợp lệ).
 
 ## 1. Hiện trạng đã xác minh
 

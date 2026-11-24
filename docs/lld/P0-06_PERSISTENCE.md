@@ -4,7 +4,7 @@
 > restart. **06b (thiết kế này):** lưu cấu hình nhà bằng migration `0002` và nạp vào `ControlService` thay cho nhà mẫu cứng
 > trong code. v2 sửa các lỗi của v1: khóa định danh thiết bị và gateway, ràng buộc placement, quy tắc xóa, version, và ai
 > được ghi cấu hình. Dựa trên [ADR 0006](../adr/0006-home-configuration-source-of-truth.md) và
-> [ADR 0004](../adr/0004-home-assistant-integration-layer.md). **Chưa triển khai 06b; DDL dưới đây là thiết kế, chưa phải migration.**
+> [ADR 0004](../adr/0004-home-assistant-integration-layer.md). **06b đã triển khai (2026-11-24) bằng migration `0002`; bằng chứng: [SPRINT1_ACCEPTANCE](../SPRINT1_ACCEPTANCE.md#ac-06-persistence). Khác thiết kế: cột số thực dùng `double precision` thay `real` để đọc lại đúng giá trị đã ghi.**
 
 ```mermaid
 flowchart LR

@@ -1,6 +1,6 @@
 # ADR 0006: Cấu hình nhà lưu trong Postgres; YAML chỉ để nhập/xuất
 
-- **Trạng thái:** ✅ **Accepted** (2026-11-23, chủ dự án duyệt theo khuyến nghị kỹ thuật, D1–D6 ở mục 5) · **Chưa triển khai**
+- **Trạng thái:** ✅ **Accepted** (2026-11-23, chủ dự án duyệt theo khuyến nghị kỹ thuật, D1–D6 ở mục 5) · **Đã triển khai** (Sprint 1, 2026-11-24; bằng chứng: [SPRINT1_ACCEPTANCE](../SPRINT1_ACCEPTANCE.md))
 - **Ngày:** 2026-11-23 (rà soát lần 2) · **Chặn:** P0-06b, P0-07 (khóa ngoại `memberships → homes`), P0-10, P0-13 ·
   **LLD:** [P0-06](../lld/P0-06_PERSISTENCE.md)
 
@@ -68,7 +68,7 @@ Chi tiết và lý do từng điểm ở [LLD P0-06 §2](../lld/P0-06_PERSISTENC
 |---|---|---|---|
 | Chủ dự án | ☑ **Accepted** theo khuyến nghị: D1–D6 đều chấp nhận | 2026-11-23 | Xác nhận trong phiên làm việc (trả lời "Duyệt cả hai") |
 
-Trạng thái và [mục lục ADR](README.md) đã cập nhật. Chấp nhận ADR **không** có nghĩa đã triển khai: việc này thuộc Sprint 1 (S1-02…S1-04).
+Trạng thái và [mục lục ADR](README.md) đã cập nhật. Việc triển khai (S1-02…S1-04) đã xong trong Sprint 1.
 
 ## 6. Hệ quả
 

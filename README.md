@@ -7,7 +7,7 @@
 | ✅ Đã có | Đường điều khiển thiết bị: policy fail-closed, xác minh theo bằng chứng, idempotency, lưu bền Postgres, REST API |
 | 🧪 Giả lập | Mọi thiết bị hiện là **simulator**; chưa điều khiển thiết bị thật |
 | ⏳ Chưa có | Đăng nhập thật, WebSocket, Home Assistant, web UI, Digital Twin 3D, AI Agent thật |
-| 📊 Tiến độ P0 | **5/18 task đạt**, 1 một phần · [Báo cáo tiến độ](docs/PROGRESS.md) |
+| 📊 Tiến độ P0 | **7/18 task đạt** (Sprint 1 xong) · [Báo cáo tiến độ](docs/PROGRESS.md) |
 
 ```mermaid
 flowchart LR
