@@ -83,4 +83,13 @@ jobs:
           failure-threshold: error
 
       - name: Docker build and runtime smoke test
-        run: bash scripts/docker_smoke.sh smart-home-future:sprint1
+        run: |
+          volumes_before=$(docker volume ls -q | sort)
+          bash scripts/docker_smoke.sh smart-home-future:sprint1
+          # Success path leaves nothing behind either.
+          test -z "$(docker ps -aq --filter name=shf-smoke-)"
+          test -z "$(docker network ls -q --filter name=shf-smoke-)"
+          test "$(docker volume ls -q | sort)" = "$volumes_before"
+
+      - name: Smoke test cleans up when it fails half-way
+        run: bash scripts/docker_smoke_cleanup_check.sh smart-home-future:sprint1 db app
